@@ -634,21 +634,23 @@ function showConsentAndDemographics() {
     </div>
   `);
   document.getElementById('toNext').addEventListener('click', () => {
-    if (!document.getElementById('consentCheck').checked) {
-      alert("يلزم تأكيد الموافقة قبل المتابعة.");
-      return;
-    }
-    if (!document.getElementById('ageInput').value) {
-      alert("يرجى إدخال العمر قبل المتابعة.");
-      document.getElementById('ageInput').focus();
-      return;
-    }
     const gender = document.getElementById('genderSelect').value;
     const year = document.getElementById('yearSelect').value;
     const gpa = document.getElementById('gpaSelect').value;
-    if (!gender || !year || !gpa) {
-      alert("يرجى تعبئة النوع والسنة الدراسية والمعدل التراكمي قبل المتابعة.");
-      return;
+    if (!PREVIEW_MODE) {
+      if (!document.getElementById('consentCheck').checked) {
+        alert("يلزم تأكيد الموافقة قبل المتابعة.");
+        return;
+      }
+      if (!document.getElementById('ageInput').value) {
+        alert("يرجى إدخال العمر قبل المتابعة.");
+        document.getElementById('ageInput').focus();
+        return;
+      }
+      if (!gender || !year || !gpa) {
+        alert("يرجى تعبئة النوع والسنة الدراسية والمعدل التراكمي قبل المتابعة.");
+        return;
+      }
     }
     // رمز المشاركة يُولَّد تلقائيًا في مرحلة التعيين القادمة (P0X-GX)، فتُحفظ
     // هذه البيانات مؤقتًا وتُرسَل معه بمجرد توليده
@@ -694,7 +696,7 @@ function showPreMeasures() {
       { items: PEARLIN_ITEMS, namePrefix: 'pre_pearlin' },
       { items: STATE_CONTROL_ITEMS, namePrefix: 'pre_state' }
     ];
-    if (!validateLikertSections(blocks)) return;
+    if (!PREVIEW_MODE && !validateLikertSections(blocks)) return;
     sendToBackend('pre_measures', {
       baeq: collectLikertBlock(BAEQ_ITEMS, 'pre_baeq'),
       pearlin: collectLikertBlock(PEARLIN_ITEMS, 'pre_pearlin'),
@@ -730,21 +732,23 @@ function showRecall() {
     const closeness = document.getElementById('closenessRating').value;
     const importance = document.getElementById('importanceRating').value;
     const influence = document.getElementById('influenceRating').value;
-    if (!past) {
-      document.getElementById('pastSituation').classList.add('missing');
-      document.getElementById('pastSituation').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      alert('يرجى وصف الموقف السابق قبل المتابعة.');
-      return;
-    }
-    if (!upcoming) {
-      document.getElementById('upcomingSituation').classList.add('missing');
-      document.getElementById('upcomingSituation').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      alert('يرجى كتابة الموقف القادم قبل المتابعة.');
-      return;
-    }
-    if (!closeness || !importance || !influence) {
-      alert('يرجى الإجابة عن الأسئلة الثلاثة بخصوص الموقف القادم قبل المتابعة.');
-      return;
+    if (!PREVIEW_MODE) {
+      if (!past) {
+        document.getElementById('pastSituation').classList.add('missing');
+        document.getElementById('pastSituation').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('يرجى وصف الموقف السابق قبل المتابعة.');
+        return;
+      }
+      if (!upcoming) {
+        document.getElementById('upcomingSituation').classList.add('missing');
+        document.getElementById('upcomingSituation').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('يرجى كتابة الموقف القادم قبل المتابعة.');
+        return;
+      }
+      if (!closeness || !importance || !influence) {
+        alert('يرجى الإجابة عن الأسئلة الثلاثة بخصوص الموقف القادم قبل المتابعة.');
+        return;
+      }
     }
     sendToBackend('recall', {
       past_situation_text: past,
@@ -832,19 +836,21 @@ function showStemOrControlPhase(phaseKey) {
   });
 
   document.getElementById('toNext').addEventListener('click', () => {
-    let missingBlock = null;
-    container.querySelectorAll('.stem-block').forEach(block => {
-      if (missingBlock) return;
-      const blanksFilled = Array.from(block.querySelectorAll('.blank-input')).every(b => b.value.trim() !== '');
-      const ideaFilled = block.querySelector('textarea').value.trim() !== '';
-      if (!blanksFilled || !ideaFilled) missingBlock = block;
-    });
-    if (missingBlock) {
-      missingBlock.classList.add('missing');
-      missingBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => missingBlock.classList.remove('missing'), 2500);
-      alert('يرجى إكمال جميع الفراغات والتفصيل الإضافي في كل بند قبل المتابعة.');
-      return;
+    if (!PREVIEW_MODE) {
+      let missingBlock = null;
+      container.querySelectorAll('.stem-block').forEach(block => {
+        if (missingBlock) return;
+        const blanksFilled = Array.from(block.querySelectorAll('.blank-input')).every(b => b.value.trim() !== '');
+        const ideaFilled = block.querySelector('textarea').value.trim() !== '';
+        if (!blanksFilled || !ideaFilled) missingBlock = block;
+      });
+      if (missingBlock) {
+        missingBlock.classList.add('missing');
+        missingBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => missingBlock.classList.remove('missing'), 2500);
+        alert('يرجى إكمال جميع الفراغات والتفصيل الإضافي في كل بند قبل المتابعة.');
+        return;
+      }
     }
 
     const submittedAt = performance.now();
@@ -887,7 +893,7 @@ function buildPostMeasureScreen(stageName) {
       { items: BAEQ_ITEMS, namePrefix: `${ns}_baeq` },
       { items: MANIP_ITEMS, namePrefix: `${ns}_manip` }
     ];
-    if (!validateLikertSections(blocks)) return;
+    if (!PREVIEW_MODE && !validateLikertSections(blocks)) return;
     sendToBackend(stageName, {
       crs: collectLikertBlock(CRS_ITEMS, `${ns}_crs`),
       state_control: collectLikertBlock(STATE_CONTROL_ITEMS, `${ns}_state`),
@@ -948,9 +954,9 @@ function showFiller() {
 
   document.getElementById('submitFiller').addEventListener('click', () => {
     const reported = document.getElementById('blueCount').value;
-    if (reported === "") { alert("يرجى إدخال رقم قبل الإرسال."); return; }
+    if (!PREVIEW_MODE && reported === "") { alert("يرجى إدخال رقم قبل الإرسال."); return; }
     sendToBackend('filler', {
-      reported_blue_count: Number(reported),
+      reported_blue_count: reported === "" ? null : Number(reported),
       actual_blue_count: sequence.filter(c => c === 'blue').length,
       trial_log: trialLog
     });
