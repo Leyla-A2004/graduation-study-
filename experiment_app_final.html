@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تجربة الصيغ الشرطية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #202A33;
+    --bg: #F7F6F2;
+    --surface: #FFFFFF;
+    --accent: #2E5266;
+    --accent-deep: #1C3A49;
+    --accent-warm: #A9792C;
+    --border: #DEDCD3;
+    --muted: #6B7280;
+    --error: #9B3B33;
+    --error-bg: #FBEEEC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg); color: var(--ink); margin: 0; padding: 0 16px 48px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .preview-banner {
+    background: var(--accent-deep); color: #fff; text-align: center; font-size: 13px;
+    font-weight: 600; padding: 8px 12px;
+  }
+  .progress-wrap { max-width: 1100px; margin: 0 auto; padding: 22px 0 0; }
+  .progress-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .code-badge { text-align: left; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .progress-fill { height: 100%; background: var(--accent-warm); border-radius: 2px; transition: width 0.4s ease; }
+  .screen { max-width: 1100px; margin: 0 auto; padding-top: 26px; }
+  .hidden { display: none; }
+  .center { text-align: center; }
+  .center button + button { margin-inline-start: 12px; }
+  p { line-height: 1.95; font-size: 17px; color: var(--ink); }
+  label.field-label { display: block; margin-top: 16px; font-size: 15px; color: var(--muted); }
+  input[type=text], input[type=number], select {
+    font-family: inherit; font-size: 16px; padding: 9px 13px;
+    border: 1px solid var(--border); border-radius: 8px; margin-top: 6px;
+    background: var(--surface); color: var(--ink);
+  }
+  select { display: block; width: 260px; max-width: 100%; }
+  input[type=text]:focus, input[type=number]:focus, textarea:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,82,102,0.12);
+  }
+  button {
+    font-family: inherit; font-size: 16px; font-weight: 600; padding: 11px 30px;
+    border-radius: 8px; border: none; background: var(--accent); color: #fff;
+    cursor: pointer; margin-top: 22px; letter-spacing: 0.2px;
+    transition: background 0.15s ease;
+  }
+  button:hover { background: var(--accent-deep); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button:disabled:hover { background: var(--accent); }
+  button.secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  button.secondary:hover { background: var(--surface); color: var(--ink); }
+
+  .scale-block {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 22px; margin-top: 20px;
+  }
+  .scale-block h3 {
+    font-family: 'Amiri', 'IBM Plex Sans Arabic', serif;
+    font-size: 21px; font-weight: 700; margin: 0 0 14px; color: var(--accent-deep);
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .likert-row { padding: 14px 0; border-top: 1px solid var(--border); }
+  .likert-row:first-of-type { border-top: none; padding-top: 4px; }
+  .likert-text { font-size: 15px; margin-bottom: 10px; line-height: 1.75; }
+  .likert-options { display: flex; flex-wrap: wrap; gap: 8px 10px; }
+  .likert-option {
+    display: flex; align-items: center; gap: 5px; font-size: 12.5px; cursor: pointer;
+    padding: 5px 10px; border: 1px solid var(--border); border-radius: 20px;
+    white-space: nowrap;
+    background: var(--bg); transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .likert-option:has(input:checked) {
+    border-color: var(--accent); background: rgba(46,82,102,0.08); color: var(--accent-deep); font-weight: 600;
+  }
+  .likert-option input { accent-color: var(--accent); margin: 0; }
+
+  .stem-block {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 22px 24px; margin-top: 20px;
+  }
+  .stem-sentence { font-size: 18px; line-height: 2.4; }
+  .blank-input {
+    border: none; border-bottom: 2px solid var(--accent); background: transparent;
+    font-family: inherit; font-weight: 600; font-size: 16px; text-align: center; color: var(--accent-deep);
+    min-width: 130px; padding: 2px 6px; margin: 0 4px;
+  }
+  .blank-input:focus { outline: none; }
+  .free-idea-label { margin-top: 16px; font-size: 14px; color: var(--muted); }
+  .example-block {
+    background: var(--bg); border: 1px dashed var(--border); border-radius: 10px;
+    padding: 14px 18px; margin-top: 20px; font-size: 15px; color: var(--muted);
+  }
+  .example-block > div:not(.example-note) { margin-bottom: 6px; }
+  .example-note { font-size: 12px; margin-top: 6px; font-style: italic; }
+  textarea {
+    width: 100%; font-family: inherit; font-size: 16px; line-height: 1.85;
+    padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px;
+    margin-top: 8px; resize: vertical; background: var(--surface); color: var(--ink);
+  }
+
+  #square { width: 180px; height: 180px; margin: 0 auto; border-radius: 12px; }
+  .todo-flag {
+    background: #FBF4E4; border: 1px solid var(--accent-warm); border-radius: 8px;
+    padding: 11px 15px; font-size: 13px; margin-top: 16px; color: #6B5225;
+  }
+  .loading { text-align: center; padding: 80px 0; color: var(--muted); font-size: 16px; }
+
+  /* يُعرَّف بعد عناصر الإدخال الأساسية أعلاه عمدًا ليضمن له الأولوية عند التعارض */
+  input.missing, textarea.missing, .likert-row.missing, .stem-block.missing {
+    outline: 2px solid var(--error); background: var(--error-bg); border-radius: 8px;
+    transition: background 0.3s;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =====================================================================
+   الإعداد الوحيد المطلوب قبل الاستخدام الفعلي:
+   الصقي هنا رابط Web App الناتج من ملف google_apps_script_backend.gs
+   ===================================================================== */
+const WEBAPP_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
+
+/* =====================================================================
+   وضع المعاينة: افتحي الرابط مضافًا إليه ?preview=1 (مع ?group=G1 أو
+   G2 أو G3 اختياريًا لاختيار مجموعة محددة بدل العشوائية) لتصفّح كل
+   مراحل التجربة دون أي اتصال فعلي بالخادم ودون أي تسجيل أو تنزيل محلي.
+   مثال: experiment_app.html?preview=1&group=G1
+   ===================================================================== */
+const _urlParams = new URLSearchParams(location.search);
+const PREVIEW_MODE = _urlParams.get('preview') === '1';
+const PREVIEW_GROUP = _urlParams.get('group');
+const PREVIEW_SHOW_DOWNLOAD = _urlParams.get('download') === '1'; // يُظهر شكل التنزيل التلقائي حتى أثناء المعاينة
+/* ===================================================================== */
+
+/* ============================== محتوى المقاييس ============================== */
+
+const BAEQ_ITEMS = [
+  "المفتاح للحياة الجيدة هو عدم الشعور بأي ألم.",
+  "أسارع إلى مغادرة أي موقف يجعلني أشعر بعدم الارتياح.",
+  "عندما تراودني ذكريات غير سارة، أحاول إبعادها عن ذهني أو تجاهلها.",
+  "أشعر بالانفصال عن مشاعري.",
+  "لن أقوم بفعل شيء إلا إذا اضطررت لذلك تمامًا.",
+  "الخوف أو القلق لن يوقفني عن فعل شيء مهم.",
+  "أنا مستعد للتخلي عن الكثير من الأشياء لكي لا أشعر بالسوء.",
+  "نادرًا ما أقوم بالشيء إذا كان هناك احتمال أن يزعجني.",
+  "يصعب علي التعرف على ما أشعر به.",
+  "أحاول تأجيل المهام غير السارة لأطول فترة ممكنة.",
+  "أبذل جهدًا إضافيًا لتجنب المواقف غير المريحة.",
+  "أحد أهدافي الكبرى هو التحرر أو التخلص من المشاعر المؤلمة.",
+  "أعمل بجد لإبعاد المشاعر المزعجة أو المحزنة.",
+  "إذا راودتني شكوك حول القيام بشيء ما، فغالبًا لن أقوم به.",
+  "الألم يؤدي دومًا إلى المعاناة."
+];
+const BAEQ_SCALE = ["أعارض بشدة", "أعارض", "أعارض إلى حد ما", "موافق إلى حد ما", "موافق", "موافق بشدة"];
+
+const PEARLIN_ITEMS = [
+  "لدي قدر ضئيل من السيطرة على الأمور التي تحدث لي.",
+  "لا توجد فعليًا أي طريقة يمكنني بها حل بعض المشكلات التي أواجهها.",
+  "ليس لدي الكثير لأفعله لتغيير العديد من الأمور المهمة في حياتي.",
+  "كثيرًا ما أشعر بالعجز عند التعامل مع مشكلات الحياة.",
+  "أحيانًا أشعر أن الحياة تسيّرني كما تشاء."
+];
+const PEARLIN_SCALE = ["موافق بشدة", "موافق", "موافق إلى حد ما", "غير موافق", "غير موافق بشدة"];
+
+/* البنود الأربعة المكيَّفة المعتمدة (محور مستقل لكل بند): الفاعلية، الاستراتيجية، الإسناد، الثقة الوجدانية */
+const STATE_CONTROL_ITEMS = [
+  "أشعر الآن أنني قادرة على التصرف بفاعلية في الوضع الحالي.",
+  "أشعر الآن أنني أعرف كيف أتعامل مع الأمور في الوضع الحالي.",
+  "أشعر الآن أن ما يحدث في الوضع الحالي يتوقف إلى حد كبير على ما أقوم به أنا.",
+  "أشعر الآن بثقة في قدرتي على التأثير في الوضع الحالي."
+];
+const STATE_CONTROL_SCALE = ["غير موافق بشدة", "غير موافق", "غير موافق إلى حد ما", "محايد", "موافق إلى حد ما", "موافق", "موافق بشدة"];
+
+const CRS_ITEMS = [
+  "لقد أغلقت صفحة هذا الحدث تمامًا.",
+  "لقد تصالحت مع هذا الحدث.",
+  "هذا الموقف قد حُسم وانتهى.",
+  "هذا الحدث أصبح صفحة مغلقة بالنسبة لي.",
+  "لقد توصلت إلى خاتمة ذات معنى لهذا الحدث.",
+  "أشعر بالتحرر من القبضة العاطفية لهذا الموقف علي.",
+  "أنا في حالة نفسية جيدة فيما يتعلق بهذا الحدث.",
+  "لقد تجاوزت هذا الحدث تمامًا.",
+  "أشعر أن هذا الحدث قد تمت تسويته.",
+  "حين أفكر في الأمر الآن، أشعر بالرضا عن الطريقة التي انتهت بها الأمور.",
+  "أنا منشغلة بهذا الحدث باستمرار.",
+  "أشعر أنني عالقة ذهنيًا في هذا الحدث.",
+  "يستهلك هذا الحدث الكثير من طاقتي الذهنية.",
+  "هذا الحدث يعيقني ذهنيًا عن التقدم.",
+  "هذا الحدث يستحوذ على انتباهي."
+];
+const CRS_SCALE = ["أعارض بشدة", "أعارض", "أعارض إلى حد ما", "محايد", "موافق إلى حد ما", "موافق", "موافق بشدة"];
+
+const MANIP_ITEMS = [
+  "كنتُ أتخيّل ظروفًا مختلفة قد تحدث مستقبلًا، وأجد أنني سأصل إلى النتيجة نفسها.",
+  "كنتُ أفكر في الاحتمالات المختلفة التي قد تحدث في المرات القادمة.",
+  "كنتُ أرى أن ما سيحدث مستقبلًا سيبقى كما هو أيًّا كان تصرّفي أو الظرف الذي يعترضني.",
+  "كنتُ أتخيّل نتائج مختلفة يمكن أن تحدث إذا واجهتُ موقفًا مشابهًا مستقبلًا.",
+  "اقتصر تفكيري أثناء الكتابة على وصف الوقائع أو الأشياء كما هي، دون تخيّل احتمالات أو بدائل.",
+  "كنتُ أفكر في أن النتيجة ستبقى كما هي في كل الأحوال.",
+  "كنتُ أرى أن ما سيحدث مستقبلًا يتوقف على تصرّف محدد أقوم به أو على ظرف بعينه.",
+  "ما مدى الجهد الذي بذلتِه فعليًا في الكتابة الآن؟"
+];
+const MANIP_SCALE = ["لم تكن حاضرة إطلاقًا", "", "", "", "كانت حاضرة بدرجة كبيرة جدًا"];
+
+const WHATIF_STEMS = [
+  { sentence: "ماذا لو لم أكن متأكدة من كفاية استعدادي للموقف القادم؟" },
+  { sentence: "ماذا لو لم يسِر أدائي في الموقف القادم كما أتوقع؟" },
+  { sentence: "ماذا لو طرأ ظرف غير متوقع في الموقف القادم؟" }
+];
+const EVENIF_STEMS = [
+  { sentence: "حتى لو لم أكن متأكدة من كفاية استعدادي للموقف القادم،" },
+  { sentence: "حتى لو لم يسِر أدائي في الموقف القادم كما أتوقع،" },
+  { sentence: "حتى لو طرأ ظرف غير متوقع في الموقف القادم،" }
+];
+// مجال المثال مقصود أن يكون بعيدًا تمامًا عن السياق الأكاديمي (موضوع الجذوع
+// الفعلية) تفاديًا لأي تلوّث دلالي يُثبّت مفردات/سياق أكاديمي في ذهن المشاركة
+// قبل كتابتها الفعلية؛ والنموذجان متناظران تمامًا في الطول والبنية
+// مثال واحد مستقل لكل صيغة (لا نص مشترك بينهما): "حتى لو" تتطلب دلاليًا حدًّا
+// أدنى من منطق الاستمرار لتبقى سليمة نحويًا، بخلاف "ماذا لو" التي تقبل عدم
+// اليقين الصريح دون ركاكة — فلا يوجد محتوى واحد محايد بالتساوي تحت الصيغتين
+// معًا؛ كل مثال هنا مبني بمعزل ليكون الأقل افتراضًا مسبقًا الممكن داخل حدود
+// صيغته هو تحديدًا، تفاديًا لتطابقه ضمنيًا مع نمط الاستجابة المتوقَّع نظريًا لها
+const WHATIF_EXAMPLES = [
+  "ماذا لو انقطع الإنترنت فجأة وأنا في منتصف إرسال رسالة مهمة؟ لا أعرف بالضبط ماذا سأفعل في تلك اللحظة."
+];
+const EVENIF_EXAMPLES = [
+  "حتى لو انقطع الإنترنت فجأة وأنا في منتصف إرسال رسالة مهمة، سأتعامل مع الأمر بطريقة ما."
+];
+
+// مهمة المجموعة الضابطة (G3): نفس بنية الجذوع (جملة + فراغ + تفصيل إضافي)
+// لكن بلا صيغة شرطية ولا مثال — نفس الثلاثة بنود تُستخدم في المرحلتين
+const CONTROL_ITEMS = [
+  { sentence: "الوقت والمكان:" },
+  { sentence: "المتطلبات المعروفة (مثل: نوع الاختبار أو المهمة، موضوعها):" },
+  { sentence: "الترتيبات العملية (مثل: ما تحتاجين إحضاره، كيف ستصلين، مع من):" }
+];
+
+const IDEA_LABEL_CONDITIONAL = (connective) => `فكرة إضافية مختلفة تبدأ بـ"${connective}":`;
+const IDEA_LABEL_CONTROL = () => "تفصيل إضافي مختلف:";
+
+const STEM_CONFIGS = {
+  G1: {
+    phase1: { connective: "ماذا لو", stems: WHATIF_STEMS, example: WHATIF_EXAMPLES, ideaLabel: IDEA_LABEL_CONDITIONAL },
+    phase2: { connective: "حتى لو", stems: EVENIF_STEMS, example: null, ideaLabel: IDEA_LABEL_CONDITIONAL }
+  },
+  G2: {
+    phase1: { connective: "حتى لو", stems: EVENIF_STEMS, example: EVENIF_EXAMPLES, ideaLabel: IDEA_LABEL_CONDITIONAL },
+    phase2: { connective: "ماذا لو", stems: WHATIF_STEMS, example: null, ideaLabel: IDEA_LABEL_CONDITIONAL }
+  },
+  G3: {
+    phase1: { connective: null, stems: CONTROL_ITEMS, example: null, ideaLabel: IDEA_LABEL_CONTROL },
+    phase2: { connective: null, stems: CONTROL_ITEMS, example: null, ideaLabel: IDEA_LABEL_CONTROL }
+  }
+};
+
+const INTRO_PHASE1 = `قبل الإجابة، أغمضي عينيكِ للحظات وتخيّلي نفسكِ في الموقف الأكاديمي القادم الذي حددتِه: أين ستكونين؟ ومن سيكون حولكِ؟ وماذا ستفعلين؟ حاولي أن تري هذا المشهد بوضوح، وأن تتصوري ما قد تفكرين فيه وتشعرين به وكيف قد تتصرفين، وكأن هذا الموقف يحدث أمامكِ الآن.`;
+const INTRO_PHASE2 = `ستعودين الآن لنفس الموقف الذي تخيلته. أغمضي عينيكِ للحظات وتخيّلي نفسكِ فيه مرة أخرى، وحاولي أن تري تفاصيله بوضوح كما لو أنه يحدث الآن. بعد ذلك، فكّري في هذا الموقف بالطريقة الموضحة أدناه.`;
+const INTRO_CONTROL_PHASE1 = `قبل أن تبدئي، أغمضي عينيكِ لحظات، وتخيّلي الموقف الأكاديمي القادم الذي حددتِه: أين سيكون؟ ومتى؟ ومن سيكون حاضرًا؟`;
+const INTRO_CONTROL_PHASE2 = `ستعودين الآن إلى الموقف الأكاديمي القادم نفسه. أغمضي عينيكِ للحظات وتخيّليه مرة أخرى: أين سيكون؟ ومتى؟ ومن سيكون حاضرًا؟ بعد ذلك، أكملي البنود الموضحة أدناه.`;
+
+const DEBRIEF_TEXT = `شكرًا لمشاركتك. إذا أحببتِ الاطلاع على تفاصيل أكثر عن الدراسة بإمكانك التواصل على الإيميل: <a href="mailto:si2203705@qu.edu.qa">si2203705@qu.edu.qa</a>. نرجو ألا تناقشي تفاصيل الدراسة مع الزميلات اللاتي قد يشاركن لاحقًا.`;
+
+const SQUARE_COLORS = { blue: "#2F6FDE", red: "#D93025", green: "#1E8E3E", yellow: "#F4B400" };
+const SQUARE_TRIAL_COUNT = 60;
+const SQUARE_TRIAL_MS = 2000;
+
+/* ============================== حالة الجلسة ============================== */
+
+const session = {
+  session_id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+  startedAt: performance.now(), // لحساب الزمن المنقضي منذ بداية الجلسة عند كل مرحلة
+  participant_code: "",
+  assigned_group: null,
+  assignment_source: null,
+  pendingDemographics: null, // تُحفظ هنا مؤقتًا إلى حين توليد رمز المشاركة عند التعيين
+  backup: {}, // نسخة كاملة من كل البيانات محليًا كشبكة أمان، تُنزَّل في نهاية الجلسة
+  elapsedByStage: {}, // الزمن المنقضي منذ بداية الجلسة عند كل مرحلة (مللي ثانية)
+  draftAnswers: {} // إجابات كل شاشة محفوظة مؤقتًا هنا، لاستعادتها عند الرجوع إليها
+};
+
+/* ============================== أدوات عامة ============================== */
+
+const app = document.getElementById('app');
+
+function renderScreen(html) {
+  const pct = (typeof FLOW !== 'undefined' && FLOW.length > 1)
+    ? Math.round((flowIndex / (FLOW.length - 1)) * 100)
+    : 0;
+  app.innerHTML = `
+    ${PREVIEW_MODE ? '<div class="preview-banner">وضع المعاينة — لا يُحتسب، ولا تُرسَل أو تُحفظ أي بيانات</div>' : ''}
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      ${(session.participant_code && flowIndex === FLOW.length - 1) ? `<div class="code-badge">رمز المشاركة: ${session.participant_code}</div>` : ''}
+    </div>
+    ${html}
+  `;
+}
+
+function renderLikertBlock(container, title, items, scaleLabels, namePrefix, prefill) {
+  const block = document.createElement('div');
+  block.className = 'scale-block';
+  const h = document.createElement('h3');
+  h.textContent = title;
+  block.appendChild(h);
+  items.forEach((text, idx) => {
+    const row = document.createElement('div');
+    row.className = 'likert-row';
+    const q = document.createElement('div');
+    q.className = 'likert-text';
+    q.textContent = (idx + 1) + '. ' + text;
+    row.appendChild(q);
+    const opts = document.createElement('div');
+    opts.className = 'likert-options';
+    const prefilledVal = prefill ? prefill[`item_${idx + 1}`] : null;
+    scaleLabels.forEach((label, li) => {
+      const val = li + 1;
+      const optWrap = document.createElement('label');
+      optWrap.className = 'likert-option';
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = `${namePrefix}_${idx}`;
+      radio.value = val;
+      if (prefilledVal !== null && prefilledVal !== undefined && Number(prefilledVal) === val) {
+        radio.checked = true;
+      }
+      optWrap.appendChild(radio);
+      const span = document.createElement('span');
+      span.textContent = label ? `${val} - ${label}` : `${val}`;
+      optWrap.appendChild(span);
+      opts.appendChild(optWrap);
+    });
+    row.appendChild(opts);
+    block.appendChild(row);
+  });
+  container.appendChild(block);
+  return block;
+}
+
+function validateLikertSections(blocks) {
+  for (const b of blocks) {
+    for (let idx = 0; idx < b.items.length; idx++) {
+      const checked = document.querySelector(`input[name="${b.namePrefix}_${idx}"]:checked`);
+      if (!checked) {
+        const row = document.querySelector(`input[name="${b.namePrefix}_${idx}"]`).closest('.likert-row');
+        row.classList.add('missing');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => row.classList.remove('missing'), 2500);
+        alert('يرجى الإجابة عن جميع البنود في هذه الصفحة قبل المتابعة.');
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function collectLikertBlock(items, namePrefix) {
+  const result = {};
+  items.forEach((text, idx) => {
+    const checked = document.querySelector(`input[name="${namePrefix}_${idx}"]:checked`);
+    result[`item_${idx + 1}`] = checked ? Number(checked.value) : null;
+  });
+  return result;
+}
+
+function csvEscape(v) {
+  if (v === undefined || v === null) return "";
+  let s = String(v);
+  if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+async function sendToBackend(stage, data) {
+  session.backup[stage] = data;
+  const elapsed = Math.round(performance.now() - session.startedAt);
+  session.elapsedByStage[stage] = elapsed; // يُسجَّل محليًا دائمًا، بصرف النظر عن نجاح الإرسال للخادم
+  if (PREVIEW_MODE) return; // وضع المعاينة: لا إرسال فعلي إطلاقًا
+  if (!WEBAPP_URL || WEBAPP_URL === "PASTE_YOUR_WEB_APP_URL_HERE") {
+    console.warn("WEBAPP_URL غير مضبوط بعد — تم الحفظ محليًا فقط لهذه المرحلة:", stage);
+    return;
+  }
+  try {
+    await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        session_id: session.session_id,
+        participant_code: session.participant_code,
+        stage: stage,
+        data: data,
+        elapsed_since_start_ms: elapsed
+      })
+    });
+  } catch (err) {
+    console.warn("تعذّر الإرسال للخادم، البيانات محفوظة محليًا فقط:", stage, err);
+  }
+}
+
+async function getAssignedGroup() {
+  if (PREVIEW_MODE) {
+    session.assignment_source = 'preview';
+    const groups = ['G1', 'G2', 'G3'];
+    const group = (PREVIEW_GROUP && groups.includes(PREVIEW_GROUP))
+      ? PREVIEW_GROUP
+      : groups[Math.floor(Math.random() * groups.length)];
+    return { group, participant_code: `PREVIEW-${group}` };
+  }
+  if (WEBAPP_URL && WEBAPP_URL !== "PASTE_YOUR_WEB_APP_URL_HERE") {
+    try {
+      const res = await fetch(`${WEBAPP_URL}?action=assign`);
+      const json = await res.json();
+      if (json.group) {
+        session.assignment_source = 'backend';
+        // رمز المشاركة التسلسلي (مثل P08-G2) يأتي جاهزًا من الخادم، لأنه الوحيد
+        // المطّلع على ترتيب كل المشاركات السابقات عبر كل الأجهزة
+        return { group: json.group, participant_code: json.participant_code || "" };
+      }
+    } catch (err) {
+      console.warn("تعذّر الوصول لخدمة التعيين العشوائي، استخدام التعيين المحلي كبديل.", err);
+    }
+  }
+  // لا يمكن معرفة الترتيب التسلسلي الصحيح محليًا دون اتصال بالخادم (العدّاد هناك فقط)،
+  // لذا يُستخدم رمز مميَّز بوضوح كي تُراجَع وتُصحَّح يدويًا لاحقًا عند استعادة الاتصال
+  session.assignment_source = 'local_fallback';
+  const groups = ['G1', 'G2', 'G3'];
+  const group = groups[Math.floor(Math.random() * groups.length)];
+  const fallbackCode = `PLOCAL-${session.session_id.slice(0, 6)}-${group}`;
+  return { group, participant_code: fallbackCode };
+}
+
+function itemKeys(n) {
+  const out = [];
+  for (let i = 1; i <= n; i++) out.push('item_' + i);
+  return out;
+}
+
+function meanOfKeys(obj, keys) {
+  if (!obj) return null;
+  const nums = keys
+    .map(k => obj[k])
+    .filter(v => v !== undefined && v !== null && v !== '')
+    .map(Number)
+    .filter(v => !isNaN(v));
+  if (!nums.length) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+// يبني صفًا عريضًا واحدًا لهذه الجلسة بنفس بنية الأعمدة المستخدمة في
+// google_apps_script_backend.gs وreshape_results.py، مباشرة من بيانات
+// الجلسة المحفوظة محليًا (session.backup) — بلا أي حاجة لاتصال بالخادم
+function buildWideRowFromSession() {
+  const s = session;
+  const BAEQ_KEYS = itemKeys(BAEQ_ITEMS.length);
+  const PEARLIN_KEYS = itemKeys(PEARLIN_ITEMS.length);
+  const STATE_KEYS = itemKeys(STATE_CONTROL_ITEMS.length);
+  const CRS_KEYS = itemKeys(CRS_ITEMS.length);
+  const MANIP_KEYS = itemKeys(MANIP_ITEMS.length);
+  const MANIP_WHATIF_KEYS = ['item_2', 'item_4', 'item_7'];
+  const MANIP_EVENIF_KEYS = ['item_1', 'item_3', 'item_6'];
+
+  const row = {};
+  row['session_id'] = s.session_id;
+  row['participant_code'] = s.participant_code;
+  row['assigned_group'] = s.assigned_group;
+  row['assignment_source'] = s.assignment_source;
+
+  const STAGE_ORDER = ['demographics', 'assignment', 'pre_measures', 'recall', 'phase1', 'post1', 'filler', 'phase2', 'post2'];
+  STAGE_ORDER.forEach(stg => { row[stg + '_elapsed_ms'] = s.elapsedByStage[stg]; });
+  // مدة كل مرحلة بمفردها (وليس تراكميًا) = الفرق بين زمنها وزمن المرحلة السابقة
+  // مباشرة — جاهزة للمقارنة الإحصائية بين المراحل دون أي طرح يدوي لاحق
+  STAGE_ORDER.forEach((stg, idx) => {
+    const cur = s.elapsedByStage[stg];
+    const prev = idx === 0 ? 0 : s.elapsedByStage[STAGE_ORDER[idx - 1]];
+    row[stg + '_duration_ms'] = (cur !== undefined && cur !== null && prev !== undefined && prev !== null)
+      ? (cur - prev) : null;
+  });
+
+  const d = s.backup['demographics'] || {};
+  row['age'] = d.age;
+  row['enrolled'] = d.enrolled;
+  row['gender'] = d.gender;
+  row['academic_year'] = d.academic_year;
+  row['gpa'] = d.gpa;
+  row['arabic_native'] = d.arabic_native;
+
+  const pre = s.backup['pre_measures'] || {};
+  const preBaeq = pre.baeq || {};
+  BAEQ_KEYS.forEach(k => row['pre_baeq_' + k] = preBaeq[k]);
+  row['pre_baeq_mean'] = meanOfKeys(preBaeq, BAEQ_KEYS);
+
+  const prePearlin = pre.pearlin || {};
+  PEARLIN_KEYS.forEach(k => row['pre_pearlin_' + k] = prePearlin[k]);
+  row['pre_pearlin_mean'] = meanOfKeys(prePearlin, PEARLIN_KEYS);
+
+  const preState = pre.state_control || {};
+  STATE_KEYS.forEach(k => row['pre_state_' + k] = preState[k]);
+  row['pre_state_mean'] = meanOfKeys(preState, STATE_KEYS);
+
+  const rc = s.backup['recall'] || {};
+  row['recall_past_situation_text'] = rc.past_situation_text;
+  row['recall_upcoming_situation_text'] = rc.upcoming_situation_text;
+  row['recall_closeness_rating'] = rc.closeness_rating;
+  row['recall_importance_rating'] = rc.importance_rating;
+  row['recall_influence_rating'] = rc.influence_rating;
+  row['recall_total_page_time_ms'] = rc.total_page_time_ms;
+
+  // المجموعات الثلاث (بما فيها الضابطة G3) تتشارك الآن نفس البنية: 3 بنود،
+  // كل بند بفراغ واحد + تفصيل/فكرة إضافية
+  ['phase1', 'phase2'].forEach(phase => {
+    const p = s.backup[phase] || {};
+    row[phase + '_group'] = p.group;
+    row[phase + '_total_page_time_ms'] = p.total_page_time_ms;
+    (p.rows || []).forEach(r => {
+      const i = r.stem_index;
+      row[phase + '_stem' + i + '_blank_text'] = r.blank_text;
+      row[phase + '_stem' + i + '_free_idea'] = r.free_idea;
+      row[phase + '_stem' + i + '_latency_ms'] = r.latency_to_first_keystroke_ms;
+      row[phase + '_stem' + i + '_writing_duration_ms'] = r.writing_duration_ms;
+    });
+  });
+
+  ['post1', 'post2'].forEach(ns => {
+    const pm = s.backup[ns] || {};
+
+    const crs = pm.crs || {};
+    CRS_KEYS.forEach(k => row[ns + '_crs_' + k] = crs[k]);
+    row[ns + '_crs_mean'] = meanOfKeys(crs, CRS_KEYS);
+
+    const st = pm.state_control || {};
+    STATE_KEYS.forEach(k => row[ns + '_state_' + k] = st[k]);
+    row[ns + '_state_mean'] = meanOfKeys(st, STATE_KEYS);
+
+    const b = pm.baeq || {};
+    BAEQ_KEYS.forEach(k => row[ns + '_baeq_' + k] = b[k]);
+    row[ns + '_baeq_mean'] = meanOfKeys(b, BAEQ_KEYS);
+
+    const manip = pm.manipulation_check || {};
+    MANIP_KEYS.forEach(k => row[ns + '_manip_' + k] = manip[k]);
+    const whatifMean = meanOfKeys(manip, MANIP_WHATIF_KEYS);
+    const evenifMean = meanOfKeys(manip, MANIP_EVENIF_KEYS);
+    row[ns + '_manip_whatif_mean'] = whatifMean;
+    row[ns + '_manip_evenif_mean'] = evenifMean;
+    row[ns + '_manip_diff_index'] = (whatifMean !== null && evenifMean !== null) ? (whatifMean - evenifMean) : '';
+    row[ns + '_manip_neutral_item5'] = manip['item_5'];
+    row[ns + '_manip_effort_item8'] = manip['item_8'];
+  });
+
+  const fl = s.backup['filler'] || {};
+  row['filler_reported_blue_count'] = fl.reported_blue_count;
+  row['filler_actual_blue_count'] = fl.actual_blue_count;
+  if (fl.reported_blue_count !== undefined && fl.actual_blue_count !== undefined) {
+    row['filler_abs_error'] = Math.abs(fl.reported_blue_count - fl.actual_blue_count);
+  }
+
+  return row;
+}
+
+function downloadWideCsvForSession() {
+  const row = buildWideRowFromSession();
+  const headers = Object.keys(row);
+  const lines = [headers.map(csvEscape).join(','), headers.map(h => csvEscape(row[h])).join(',')];
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `session_${session.participant_code || 'anon'}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadBackupJSON() {
+  const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `session_backup_${session.participant_code || 'anon'}_${session.session_id}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ============================== تسلسل مراحل الجلسة ============================== */
+
+const FLOW = [
+  showConsentAndDemographics,
+  showAssigning,
+  showPreMeasures,
+  showRecall,
+  () => showStemOrControlPhase('phase1'),
+  showPost1,
+  showFiller,
+  () => showStemOrControlPhase('phase2'),
+  showPost2,
+  showDebrief
+];
+let flowIndex = 0;
+function next() {
+  flowIndex++;
+  if (flowIndex < FLOW.length) FLOW[flowIndex]();
+}
+function prev() {
+  if (flowIndex > 0) {
+    flowIndex--;
+    // شاشة التعيين تلقائية بلا أي تفاعل — لا معنى للتوقف عندها رجوعًا
+    if (FLOW[flowIndex] === showAssigning) flowIndex--;
+    if (flowIndex >= 0) FLOW[flowIndex]();
+  }
+}
+
+/* ---------- 1) الموافقة والبيانات الديموغرافية ---------- */
+function showConsentAndDemographics() {
+  const draft = session.draftAnswers.consent || {};
+  renderScreen(`
+    <div class="screen">
+      <div class="scale-block">
+        <h3>الموافقة المستنيرة</h3>
+        <label class="field-label"><input type="checkbox" id="consentCheck"> أوافق على المشاركة في هذه الدراسة.</label>
+      </div>
+      <div class="scale-block">
+        <h3>بيانات أولية</h3>
+        <label class="field-label" for="ageInput">العمر (بالأرقام)</label>
+        <input type="number" id="ageInput" min="18" max="46">
+        <label class="field-label" for="genderSelect">النوع</label>
+        <select id="genderSelect">
+          <option value="">-- اختاري --</option>
+          <option value="رجل">رجل</option>
+          <option value="امرأة">امرأة</option>
+        </select>
+        <label class="field-label" for="yearSelect">السنة الدراسية</label>
+        <select id="yearSelect">
+          <option value="">-- اختاري --</option>
+          <option value="الأولى">الأولى</option>
+          <option value="الثانية">الثانية</option>
+          <option value="الثالثة">الثالثة</option>
+          <option value="الرابعة أو أكثر">الرابعة أو أكثر</option>
+        </select>
+        <label class="field-label" for="gpaSelect">المعدل التراكمي</label>
+        <select id="gpaSelect">
+          <option value="">-- اختاري --</option>
+          <option value="أقل من 2.00">أقل من 2.00</option>
+          <option value="من 2.00 إلى 2.49">من 2.00 إلى 2.49</option>
+          <option value="من 2.50 إلى 2.99">من 2.50 إلى 2.99</option>
+          <option value="من 3.00 إلى 3.49">من 3.00 إلى 3.49</option>
+          <option value="من 3.50 إلى 4.00">من 3.50 إلى 4.00</option>
+        </select>
+        <label class="field-label" for="enrolledSelect">طالبة حاليًا</label>
+        <select id="enrolledSelect">
+          <option value="">-- اختاري --</option>
+          <option value="نعم">نعم</option>
+          <option value="لا">لا</option>
+        </select>
+        <label class="field-label" for="arabicSelect">اللغة العربية هي لغتي الأم</label>
+        <select id="arabicSelect">
+          <option value="">-- اختاري --</option>
+          <option value="نعم">نعم</option>
+          <option value="لا">لا</option>
+        </select>
+      </div>
+      <div class="center"><button id="toNext">متابعة</button></div>
+    </div>
+  `);
+  // استعادة الإجابات المحفوظة (لو عادت المشاركة لهذه الشاشة من شاشة لاحقة)
+  if (draft.consentChecked) document.getElementById('consentCheck').checked = true;
+  if (draft.age) document.getElementById('ageInput').value = draft.age;
+  if (draft.gender) document.getElementById('genderSelect').value = draft.gender;
+  if (draft.year) document.getElementById('yearSelect').value = draft.year;
+  if (draft.gpa) document.getElementById('gpaSelect').value = draft.gpa;
+  if (draft.enrolled) document.getElementById('enrolledSelect').value = draft.enrolled;
+  if (draft.arabic) document.getElementById('arabicSelect').value = draft.arabic;
+
+  document.getElementById('toNext').addEventListener('click', () => {
+    const gender = document.getElementById('genderSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    const gpa = document.getElementById('gpaSelect').value;
+    const enrolled = document.getElementById('enrolledSelect').value;
+    const arabic = document.getElementById('arabicSelect').value;
+    session.draftAnswers.consent = {
+      consentChecked: document.getElementById('consentCheck').checked,
+      age: document.getElementById('ageInput').value,
+      gender, year, gpa, enrolled, arabic
+    };
+    if (!PREVIEW_MODE) {
+      if (!document.getElementById('consentCheck').checked) {
+        alert("يلزم تأكيد الموافقة قبل المتابعة.");
+        return;
+      }
+      if (!document.getElementById('ageInput').value) {
+        alert("يرجى إدخال العمر قبل المتابعة.");
+        document.getElementById('ageInput').focus();
+        return;
+      }
+      if (!gender || !year || !gpa || !enrolled || !arabic) {
+        alert("يرجى تعبئة كل الحقول قبل المتابعة.");
+        return;
+      }
+    }
+    // رمز المشاركة يُولَّد تلقائيًا في مرحلة التعيين القادمة (P0X-GX)، فتُحفظ
+    // هذه البيانات مؤقتًا وتُرسَل معه بمجرد توليده
+    session.pendingDemographics = {
+      age: document.getElementById('ageInput').value,
+      gender: gender,
+      academic_year: year,
+      gpa: gpa,
+      enrolled: enrolled,
+      arabic_native: arabic
+    };
+
+    // شرط إقصاء: غير الناطقات بالعربية كلغة أم — تنتهي التجربة هنا فورًا
+    if (arabic === 'لا') {
+      renderScreen(`
+        <div class="screen center">
+          <p>شكرًا لك على المشاركة. تنتهي تجربتك هنا.</p>
+        </div>
+      `);
+      return;
+    }
+
+    next();
+  });
+}
+
+/* ---------- 2) التعيين العشوائي (شاشة انتقالية قصيرة) ---------- */
+function showAssigning() {
+  // لو كانت المشاركة قد عُيِّنت بالفعل (رجعت لهذه النقطة عبر زر "السابق" من
+  // شاشة لاحقة)، لا نطلب تعيينًا جديدًا من الخادم إطلاقًا — نكتفي بما سبق
+  if (session.assigned_group) {
+    next();
+    return;
+  }
+  renderScreen(`<div class="screen loading"><p>لحظات من فضلك...</p></div>`);
+  getAssignedGroup().then(({ group, participant_code }) => {
+    session.assigned_group = group;
+    session.participant_code = participant_code;
+    // تُرسَل البيانات الديموغرافية الآن (بعد تأجيلها من شاشة الموافقة) لأن رمز
+    // المشاركة بات معروفًا، فتُحفظ كل البيانات مرتبطة بالرمز نفسه منذ أول سطر
+    if (session.pendingDemographics) {
+      sendToBackend('demographics', session.pendingDemographics);
+    }
+    sendToBackend('assignment', { group: group, source: session.assignment_source });
+    next();
+  });
+}
+
+/* ---------- 3) القياس القبلي ---------- */
+function showPreMeasures() {
+  const draft = session.draftAnswers.pre_measures || {};
+  renderScreen(`<div class="screen"><div id="preContainer"></div><div class="center">
+    <button id="toPrev" class="secondary">السابق</button>
+    <button id="toNext">التالي</button>
+  </div></div>`);
+  const container = document.getElementById('preContainer');
+  renderLikertBlock(container, "القسم 1", BAEQ_ITEMS, BAEQ_SCALE, 'pre_baeq', draft.baeq);
+  renderLikertBlock(container, "القسم 2", PEARLIN_ITEMS, PEARLIN_SCALE, 'pre_pearlin', draft.pearlin);
+  renderLikertBlock(container, "القسم 3", STATE_CONTROL_ITEMS, STATE_CONTROL_SCALE, 'pre_state', draft.state_control);
+
+  function collectAll() {
+    return {
+      baeq: collectLikertBlock(BAEQ_ITEMS, 'pre_baeq'),
+      pearlin: collectLikertBlock(PEARLIN_ITEMS, 'pre_pearlin'),
+      state_control: collectLikertBlock(STATE_CONTROL_ITEMS, 'pre_state')
+    };
+  }
+
+  document.getElementById('toPrev').addEventListener('click', () => {
+    session.draftAnswers.pre_measures = collectAll();
+    prev();
+  });
+  document.getElementById('toNext').addEventListener('click', () => {
+    const data = collectAll();
+    session.draftAnswers.pre_measures = data;
+    const blocks = [
+      { items: BAEQ_ITEMS, namePrefix: 'pre_baeq' },
+      { items: PEARLIN_ITEMS, namePrefix: 'pre_pearlin' },
+      { items: STATE_CONTROL_ITEMS, namePrefix: 'pre_state' }
+    ];
+    if (!PREVIEW_MODE && !validateLikertSections(blocks)) return;
+    sendToBackend('pre_measures', data);
+    next();
+  });
+}
+
+/* ---------- 4) استدعاء السيناريو ---------- */
+function showRecall() {
+  const draft = session.draftAnswers.recall || {};
+  renderScreen(`
+    <div class="screen">
+      <p>صِفي بالتفصيل أحد أكثر المواقف السلبية التي مررتِ بها فيما يتعلق بالمجال الأكاديمي، ولا يزال يعود إلى تفكيرك أحيانًا ببعض تفاصيله؛ مثل: الحصول على درجة أقل مما توقعتِ، أو عرض تقديمي لم يسر كما أردتِ، أو التأخر في تسليم مهمة، أو خلاف مع زميلة أو أستاذ حول عمل أكاديمي، أو موقف أكاديمي انزعجت/حزنت فيه أسرتك بسبب أدائك، أو إحباط توقعات معينة لديهم أو لديكِ. اختاري موقفًا مزعجًا بدرجة متوسطة، وليس أكثر المواقف إيلامًا في حياتك.</p>
+      <p>اكتبي عن هذا الموقف بالتفصيل: ماذا حدث؟ أين ومتى؟ ما الذي فعلتِه أنتِ وما الذي فعله الآخرون؟ بماذا شعرتِ في تلك اللحظة؟ وبماذا تشعرين الآن وأنتِ تتذكرينه؟ حاولي أن تعيشي الموقف كأنه يحدث الآن، واستمري في الكتابة حتى ينتهي الوقت.</p>
+      <textarea id="pastSituation" style="min-height:220px">${draft.past || ''}</textarea>
+      <p style="margin-top:22px">فكّري الآن في موقف أكاديمي قادم تتوقعين أن تمرّي به، ويشبه في طبيعته الموقف الذي كتبتِ عنه، واكتبيه في سطر واحد بشكل محدد (مثل: "الاختبار النهائي لمادة الإحصاء"):</p>
+      <input type="text" id="upcomingSituation" style="width:100%" value="${draft.upcoming ? draft.upcoming.replace(/"/g, '&quot;') : ''}">
+      <p style="margin-top:22px">أجيبي عن الأسئلة الثلاثة التالية بخصوص هذا الموقف (ضعي رقمًا من 1 إلى 7 لكل سؤال):</p>
+      <label class="field-label" for="closenessRating">1. ما مدى قرب هذا الموقف زمنيًا؟ (1 = بعيد جدًا — 7 = قريب جدًا)</label>
+      <input type="number" id="closenessRating" min="1" max="7" value="${draft.closeness || ''}">
+      <label class="field-label" for="importanceRating">2. ما درجة أهمية هذا الموقف أو إزعاجه بالنسبة لكِ؟ (1 = غير مهم إطلاقًا — 7 = مهم جدًا)</label>
+      <input type="number" id="importanceRating" min="1" max="7" value="${draft.importance || ''}">
+      <label class="field-label" for="influenceRating">3. ما درجة شعوركِ بقدرتكِ على التأثير في نتيجة هذا الموقف؟ (1 = لا تأثير إطلاقًا — 7 = تأثير كامل)</label>
+      <input type="number" id="influenceRating" min="1" max="7" value="${draft.influence || ''}">
+      <div class="center">
+        <button id="toPrev" class="secondary">السابق</button>
+        <button id="toNext">التالي</button>
+      </div>
+    </div>
+  `);
+  const shownAt = performance.now();
+
+  function collectAll() {
+    return {
+      past: document.getElementById('pastSituation').value,
+      upcoming: document.getElementById('upcomingSituation').value,
+      closeness: document.getElementById('closenessRating').value,
+      importance: document.getElementById('importanceRating').value,
+      influence: document.getElementById('influenceRating').value
+    };
+  }
+  document.getElementById('toPrev').addEventListener('click', () => {
+    session.draftAnswers.recall = collectAll();
+    prev();
+  });
+
+  document.getElementById('toNext').addEventListener('click', () => {
+    const past = document.getElementById('pastSituation').value.trim();
+    const upcoming = document.getElementById('upcomingSituation').value.trim();
+    const closeness = document.getElementById('closenessRating').value;
+    const importance = document.getElementById('importanceRating').value;
+    const influence = document.getElementById('influenceRating').value;
+    session.draftAnswers.recall = collectAll();
+    if (!PREVIEW_MODE) {
+      if (!past) {
+        document.getElementById('pastSituation').classList.add('missing');
+        document.getElementById('pastSituation').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('يرجى وصف الموقف السابق قبل المتابعة.');
+        return;
+      }
+      if (!upcoming) {
+        document.getElementById('upcomingSituation').classList.add('missing');
+        document.getElementById('upcomingSituation').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('يرجى كتابة الموقف القادم قبل المتابعة.');
+        return;
+      }
+      if (!closeness || !importance || !influence) {
+        alert('يرجى الإجابة عن الأسئلة الثلاثة بخصوص الموقف القادم قبل المتابعة.');
+        return;
+      }
+    }
+    sendToBackend('recall', {
+      past_situation_text: past,
+      upcoming_situation_text: upcoming,
+      closeness_rating: Number(closeness),
+      importance_rating: Number(importance),
+      influence_rating: Number(influence),
+      total_page_time_ms: Math.round(performance.now() - shownAt)
+    });
+    next();
+  });
+}
+
+/* ---------- 5) و8) مرحلتا الجذع اللغوي / الوصف المحايد ---------- */
+function showStemOrControlPhase(phaseKey) {
+  const group = session.assigned_group;
+  const isControl = group === 'G3';
+  const intro = isControl
+    ? (phaseKey === 'phase1' ? INTRO_CONTROL_PHASE1 : INTRO_CONTROL_PHASE2)
+    : (phaseKey === 'phase1' ? INTRO_PHASE1 : INTRO_PHASE2);
+  const draft = session.draftAnswers[phaseKey] || {};
+  const draftRows = draft.rows || [];
+
+  renderScreen(`
+    <div class="screen">
+      ${intro ? `<p>${intro}</p>` : ''}
+      <div id="phaseContainer"></div>
+      <div class="center">
+        <button id="toPrev" class="secondary">السابق</button>
+        <button id="toNext">التالي</button>
+      </div>
+    </div>
+  `);
+
+  const container = document.getElementById('phaseContainer');
+  const pageShownAt = performance.now();
+  const timing = {};
+
+  // شرط زمني أدنى (دقيقة ونصف) قبل تفعيل زر المتابعة — لتشجيع تفكير متأنٍّ
+  // بدل إجابات سريعة؛ يُتجاوَز في وضع المعاينة فقط
+  if (!PREVIEW_MODE) {
+    const MIN_TIME_MS = 90000;
+    const nextBtn = document.getElementById('toNext');
+    nextBtn.disabled = true;
+    const notice = document.createElement('p');
+    notice.id = 'timeGateNotice';
+    notice.className = 'todo-flag';
+    notice.textContent = 'خذ وقتك في التفكير لأن ما تفكر فيه سينعكس على إجابتك. سيُتاح زر المتابعة بعد دقيقة ونصف.';
+    nextBtn.insertAdjacentElement('afterend', notice);
+    const gateTimer = setInterval(() => {
+      if (performance.now() - pageShownAt >= MIN_TIME_MS) {
+        nextBtn.disabled = false;
+        notice.remove();
+        clearInterval(gateTimer);
+      }
+    }, 500);
+  }
+
+  function attachTiming(el, key) {
+    timing[key] = { firstKeystroke: null, lastKeystroke: null };
+    el.addEventListener('input', () => {
+      const now = performance.now();
+      if (timing[key].firstKeystroke === null) timing[key].firstKeystroke = now;
+      timing[key].lastKeystroke = now;
+    });
+  }
+
+  const cfg = STEM_CONFIGS[group][phaseKey];
+
+  if (cfg.example) {
+    const exBlock = document.createElement('div');
+    exBlock.className = 'example-block';
+    cfg.example.forEach((ex) => {
+      const exLine = document.createElement('div');
+      exLine.textContent = `مثال: ${ex}`;
+      exBlock.appendChild(exLine);
+    });
+    const exNote = document.createElement('div');
+    exNote.className = 'example-note';
+    exNote.textContent = '(هذا مجرد مثال على طريقة إكمال الجملة، وليس نموذجًا للإجابة الصحيحة — إجابتك قد تكون فكرة عملية، أو شعورًا، أو أي تعليق آخر يخطر ببالك فعلًا في تلك اللحظة.)';
+    exBlock.appendChild(exNote);
+    container.appendChild(exBlock);
+  }
+
+  cfg.stems.forEach((stem, i) => {
+    const block = document.createElement('div');
+    block.className = 'stem-block';
+    const sentence = document.createElement('div');
+    sentence.className = 'stem-sentence';
+    sentence.appendChild(document.createTextNode(stem.sentence + ' '));
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'blank-input';
+    inp.dataset.stem = i;
+    if (draftRows[i] && draftRows[i].blank_text) inp.value = draftRows[i].blank_text;
+    sentence.appendChild(inp);
+    block.appendChild(sentence);
+
+    const label = document.createElement('div');
+    label.className = 'free-idea-label';
+    label.textContent = cfg.ideaLabel(cfg.connective);
+    block.appendChild(label);
+
+    const ta = document.createElement('textarea');
+    ta.style.minHeight = '70px';
+    ta.dataset.stem = i;
+    if (draftRows[i] && draftRows[i].free_idea) ta.value = draftRows[i].free_idea;
+    attachTiming(ta, `stem_${i}`);
+    block.appendChild(ta);
+
+    container.appendChild(block);
+  });
+
+  function collectRows() {
+    const rows = [];
+    container.querySelectorAll('.stem-block').forEach((block, i) => {
+      const blankText = Array.from(block.querySelectorAll('.blank-input')).map(b => b.value.trim()).join(' | ');
+      const ta = block.querySelector('textarea');
+      const t = timing[`stem_${i}`];
+      rows.push({
+        stem_index: i + 1,
+        blank_text: blankText,
+        free_idea: ta.value,
+        latency_to_first_keystroke_ms: t.firstKeystroke !== null ? Math.round(t.firstKeystroke - pageShownAt) : null,
+        writing_duration_ms: (t.firstKeystroke !== null && t.lastKeystroke !== null) ? Math.round(t.lastKeystroke - t.firstKeystroke) : null
+      });
+    });
+    return rows;
+  }
+
+  document.getElementById('toPrev').addEventListener('click', () => {
+    session.draftAnswers[phaseKey] = { rows: collectRows() };
+    prev();
+  });
+
+  document.getElementById('toNext').addEventListener('click', () => {
+    if (!PREVIEW_MODE) {
+      let missingBlock = null;
+      container.querySelectorAll('.stem-block').forEach(block => {
+        if (missingBlock) return;
+        const blanksFilled = Array.from(block.querySelectorAll('.blank-input')).every(b => b.value.trim() !== '');
+        const ideaFilled = block.querySelector('textarea').value.trim() !== '';
+        if (!blanksFilled || !ideaFilled) missingBlock = block;
+      });
+      if (missingBlock) {
+        missingBlock.classList.add('missing');
+        missingBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => missingBlock.classList.remove('missing'), 2500);
+        alert('يرجى إكمال جميع الفراغات والتفصيل الإضافي في كل بند قبل المتابعة.');
+        return;
+      }
+    }
+
+    const submittedAt = performance.now();
+    const rows = collectRows();
+    sendToBackend(phaseKey, {
+      group: group,
+      rows: rows,
+      total_page_time_ms: Math.round(submittedAt - pageShownAt)
+    });
+    next();
+  });
+}
+
+/* ---------- 6) و9) القياس البعدي (الأول والثاني بنفس الترتيب) ---------- */
+function buildPostMeasureScreen(stageName) {
+  const ns = stageName; // 'post1' | 'post2' — لتمييز أسماء الحقول بين القياسين
+  const draft = session.draftAnswers[ns] || {};
+  renderScreen(`<div class="screen"><div id="postContainer"></div><div class="center">
+    <button id="toPrev" class="secondary">السابق</button>
+    <button id="toNext">التالي</button>
+  </div></div>`);
+  const container = document.getElementById('postContainer');
+  renderLikertBlock(container, "القسم 1", CRS_ITEMS, CRS_SCALE, `${ns}_crs`, draft.crs);
+  renderLikertBlock(container, "القسم 2", STATE_CONTROL_ITEMS, STATE_CONTROL_SCALE, `${ns}_state`, draft.state_control);
+  renderLikertBlock(container, "القسم 3", BAEQ_ITEMS, BAEQ_SCALE, `${ns}_baeq`, draft.baeq);
+  renderLikertBlock(container, "القسم 4", MANIP_ITEMS, MANIP_SCALE, `${ns}_manip`, draft.manipulation_check);
+
+  function collectAll() {
+    return {
+      crs: collectLikertBlock(CRS_ITEMS, `${ns}_crs`),
+      state_control: collectLikertBlock(STATE_CONTROL_ITEMS, `${ns}_state`),
+      baeq: collectLikertBlock(BAEQ_ITEMS, `${ns}_baeq`),
+      manipulation_check: collectLikertBlock(MANIP_ITEMS, `${ns}_manip`)
+    };
+  }
+
+  document.getElementById('toPrev').addEventListener('click', () => {
+    session.draftAnswers[ns] = collectAll();
+    prev();
+  });
+  document.getElementById('toNext').addEventListener('click', () => {
+    const data = collectAll();
+    session.draftAnswers[ns] = data;
+    const blocks = [
+      { items: CRS_ITEMS, namePrefix: `${ns}_crs` },
+      { items: STATE_CONTROL_ITEMS, namePrefix: `${ns}_state` },
+      { items: BAEQ_ITEMS, namePrefix: `${ns}_baeq` },
+      { items: MANIP_ITEMS, namePrefix: `${ns}_manip` }
+    ];
+    if (!PREVIEW_MODE && !validateLikertSections(blocks)) return;
+    sendToBackend(stageName, data);
+    next();
+  });
+}
+function showPost1() { buildPostMeasureScreen('post1'); }
+function showPost2() { buildPostMeasureScreen('post2'); }
+
+/* ---------- 7) المهمة الفاصلة ---------- */
+function showFiller() {
+  renderScreen(`
+    <div class="screen center">
+      <div id="fillerIntro">
+        <p>ستظهر أمامكِ على الشاشة مربعات بألوان مختلفة، واحدًا تلو الآخر. عُدّي بهدوء كم مرة يظهر المربع الأزرق، ثم اكتبي العدد عند انتهاء العرض.</p>
+        <button id="toPrev" class="secondary">السابق</button>
+        <button id="startFiller">ابدأ</button>
+        ${PREVIEW_MODE ? '<br><button id="skipFiller" class="secondary">تخطي عرض الألوان (معاينة فقط)</button>' : ''}
+      </div>
+      <div id="fillerDisplay" class="hidden"><div id="square"></div></div>
+      <div id="fillerQuestion" class="hidden">
+        <p>كم مرة ظهر المربع الأزرق؟</p>
+        <input type="number" id="blueCount" min="0" max="60">
+        <br><button id="submitFiller">إرسال</button>
+      </div>
+    </div>
+  `);
+
+  const colorNames = Object.keys(SQUARE_COLORS);
+  const sequence = [];
+  for (let i = 0; i < SQUARE_TRIAL_COUNT; i++) sequence.push(colorNames[Math.floor(Math.random() * colorNames.length)]);
+  const trialLog = [];
+  let trialIndex = 0;
+  let startedAt = 0;
+  let timer = null;
+
+  document.getElementById('toPrev').addEventListener('click', () => { prev(); });
+
+  document.getElementById('startFiller').addEventListener('click', () => {
+    document.getElementById('fillerIntro').classList.add('hidden');
+    document.getElementById('fillerDisplay').classList.remove('hidden');
+    startedAt = performance.now();
+    showNextTrial();
+    timer = setInterval(showNextTrial, SQUARE_TRIAL_MS);
+  });
+
+  if (PREVIEW_MODE) {
+    document.getElementById('skipFiller').addEventListener('click', () => {
+      // تخطٍّ كامل: لا تشغيل للمؤقت إطلاقًا، الانتقال مباشرة لشاشة السؤال
+      document.getElementById('fillerIntro').classList.add('hidden');
+      document.getElementById('fillerDisplay').classList.add('hidden');
+      document.getElementById('fillerQuestion').classList.remove('hidden');
+    });
+  }
+
+  function showNextTrial() {
+    if (trialIndex >= SQUARE_TRIAL_COUNT) {
+      clearInterval(timer);
+      document.getElementById('fillerDisplay').classList.add('hidden');
+      document.getElementById('fillerQuestion').classList.remove('hidden');
+      return;
+    }
+    const color = sequence[trialIndex];
+    document.getElementById('square').style.background = SQUARE_COLORS[color];
+    trialLog.push({ trial: trialIndex + 1, color, shownAtMs: Math.round(performance.now() - startedAt) });
+    trialIndex++;
+  }
+
+  document.getElementById('submitFiller').addEventListener('click', () => {
+    const reported = document.getElementById('blueCount').value;
+    if (!PREVIEW_MODE && reported === "") { alert("يرجى إدخال رقم قبل الإرسال."); return; }
+    sendToBackend('filler', {
+      reported_blue_count: reported === "" ? null : Number(reported),
+      actual_blue_count: sequence.filter(c => c === 'blue').length,
+      trial_log: trialLog
+    });
+    next();
+  });
+}
+
+/* ---------- 10) الإحاطة ---------- */
+function showDebrief() {
+  if (PREVIEW_MODE) {
+    const downloadNote = PREVIEW_SHOW_DOWNLOAD
+      ? 'انتهت المعاينة. نُزِّل الآن ملف CSV تجريبي ليوضّح شكل التنزيل التلقائي فقط — لم يُرسَل أي شيء للخادم ولم يتأثر أي عداد حقيقي.'
+      : 'انتهت المعاينة. لا يوجد أي ملف نُزِّل ولا أي بيانات أُرسلت أو حُفظت. (لمشاهدة شكل التنزيل التلقائي فعليًا، أضيفي ‎&download=1 لرابط المعاينة.)';
+    renderScreen(`
+      <div class="screen center">
+        <p>${DEBRIEF_TEXT}</p>
+        <div class="todo-flag">${downloadNote}</div>
+        <button id="previewAgain" class="secondary">معاينة مرة أخرى</button>
+      </div>
+    `);
+    if (PREVIEW_SHOW_DOWNLOAD) downloadWideCsvForSession();
+    document.getElementById('previewAgain').addEventListener('click', () => location.reload());
+    return;
+  }
+  renderScreen(`
+    <div class="screen center">
+      <p>${DEBRIEF_TEXT}</p>
+      <div class="todo-flag">تم تنزيل ملف بيانات هذه المشاركة تلقائيًا الآن إلى مجلد التنزيلات.</div>
+      <button id="downloadBackup" class="secondary">تنزيل نسخة احتياطية خام إضافية (JSON)</button>
+    </div>
+  `);
+  // تنزيل تلقائي فوري لصف CSV عريض جاهز للتحليل لهذه الجلسة — بلا أي
+  // حاجة لضغط زر، وبصرف النظر عن نجاح الإرسال للخادم من عدمه
+  downloadWideCsvForSession();
+  document.getElementById('downloadBackup').addEventListener('click', downloadBackupJSON);
+}
+
+/* ============================== البداية ============================== */
+FLOW[0]();
+</script>
+</body>
+</html>
