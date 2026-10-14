@@ -291,6 +291,37 @@ const session = {
   draftAnswers: {} // إجابات كل شاشة محفوظة مؤقتًا هنا، لاستعادتها عند الرجوع إليها
 };
 
+/* ===================== رصد الانقطاع (مغادرة الصفحة مؤقتًا) =====================
+   يرصد الوقت الذي تقضيه المشاركة خارج الصفحة (مكالمة، تبديل تطبيق، قفل الشاشة...)
+   عبر Page Visibility API، ويُرفق مجموع هذا الوقت لكل مرحلة ضمن بياناتها (away_ms)
+   مع علم تحذيري (had_interruption) — لا يُصحَّح الزمن تلقائيًا، فقط يُجعل ظاهرًا
+   وقابلًا للرصد لاحقًا عند التحليل.
+   ================================================================================= */
+let _awayMsTotal = 0;
+let _awayMsSnapshotAtLastSave = 0;
+let _hiddenSince = null;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    _hiddenSince = performance.now();
+  } else if (_hiddenSince !== null) {
+    _awayMsTotal += performance.now() - _hiddenSince;
+    _hiddenSince = null;
+  }
+});
+
+// يحسب مدة الغياب عن الصفحة منذ آخر مرحلة أُرسلت، ثم يُصفّر العدّاد الجزئي لهذه القراءة
+function takeAwayMsSinceLastStage() {
+  let total = _awayMsTotal;
+  if (_hiddenSince !== null) {
+    // المشاركة لا تزال غائبة لحظة الإرسال (حالة نادرة) — تُحتسب حتى هذه اللحظة أيضًا
+    total += performance.now() - _hiddenSince;
+  }
+  const delta = Math.round(total - _awayMsSnapshotAtLastSave);
+  _awayMsSnapshotAtLastSave = total;
+  return delta;
+}
+
 /* ============================== أدوات عامة ============================== */
 
 const app = document.getElementById('app');
@@ -383,7 +414,13 @@ function csvEscape(v) {
 }
 
 async function sendToBackend(stage, data) {
-  session.backup[stage] = data;
+  // نرفق مدة الغياب عن الصفحة منذ آخر مرحلة (إن وُجدت) ضمن بيانات هذه المرحلة تحديدًا
+  const awayMs = takeAwayMsSinceLastStage();
+  const enrichedData = Object.assign({}, data, {
+    away_ms: awayMs,
+    had_interruption: awayMs > 0
+  });
+  session.backup[stage] = enrichedData;
   const elapsed = Math.round(performance.now() - session.startedAt);
   session.elapsedByStage[stage] = elapsed; // يُسجَّل محليًا دائمًا، بصرف النظر عن نجاح الإرسال للخادم
   if (PREVIEW_MODE) return; // وضع المعاينة: لا إرسال فعلي إطلاقًا
@@ -391,20 +428,33 @@ async function sendToBackend(stage, data) {
     console.warn("WEBAPP_URL غير مضبوط بعد — تم الحفظ محليًا فقط لهذه المرحلة:", stage);
     return;
   }
-  try {
-    await fetch(WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        session_id: session.session_id,
-        participant_code: session.participant_code,
-        stage: stage,
-        data: data,
-        elapsed_since_start_ms: elapsed
-      })
-    });
-  } catch (err) {
-    console.warn("تعذّر الإرسال للخادم، البيانات محفوظة محليًا فقط:", stage, err);
+  const payload = JSON.stringify({
+    session_id: session.session_id,
+    participant_code: session.participant_code,
+    stage: stage,
+    data: enrichedData,
+    elapsed_since_start_ms: elapsed
+  });
+  // إعادة محاولة تلقائية عند فشل الإرسال (انقطاع إنترنت مؤقت، مكالمة، إلخ) بدل
+  // الاستسلام من أول محاولة — تحاول 3 مرات بفاصل 2 ثانية قبل الاكتفاء بالحفظ المحلي
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 2000;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      });
+      return; // نجح الإرسال، لا داعي لأي محاولة إضافية
+    } catch (err) {
+      console.warn(`تعذّر الإرسال للخادم (محاولة ${attempt}/${MAX_ATTEMPTS}):`, stage, err);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      } else {
+        console.warn("فشلت كل محاولات الإرسال، البيانات محفوظة محليًا فقط لهذه المرحلة:", stage);
+      }
+    }
   }
 }
 
@@ -418,17 +468,26 @@ async function getAssignedGroup() {
     return { group, participant_code: `PREVIEW-${group}` };
   }
   if (WEBAPP_URL && WEBAPP_URL !== "PASTE_YOUR_WEB_APP_URL_HERE") {
-    try {
-      const res = await fetch(`${WEBAPP_URL}?action=assign`);
-      const json = await res.json();
-      if (json.group) {
-        session.assignment_source = 'backend';
-        // رمز المشاركة التسلسلي (مثل P08-G2) يأتي جاهزًا من الخادم، لأنه الوحيد
-        // المطّلع على ترتيب كل المشاركات السابقات عبر كل الأجهزة
-        return { group: json.group, participant_code: json.participant_code || "" };
+    // إعادة محاولة قبل اللجوء للتعيين المحلي — انقطاع لحظي لا يجب أن يُفقدنا التوازن الحقيقي
+    const MAX_ASSIGN_ATTEMPTS = 2;
+    const ASSIGN_RETRY_DELAY_MS = 1500;
+    for (let attempt = 1; attempt <= MAX_ASSIGN_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(`${WEBAPP_URL}?action=assign`);
+        const json = await res.json();
+        if (json.group) {
+          session.assignment_source = 'backend';
+          // رمز المشاركة التسلسلي (مثل P08-G2) يأتي جاهزًا من الخادم، لأنه الوحيد
+          // المطّلع على ترتيب كل المشاركات السابقات عبر كل الأجهزة
+          return { group: json.group, participant_code: json.participant_code || "" };
+        }
+        break; // استجابة بلا مجموعة (خطأ من الخادم نفسه) — لا فائدة من إعادة المحاولة
+      } catch (err) {
+        console.warn(`تعذّر الوصول لخدمة التعيين العشوائي (محاولة ${attempt}/${MAX_ASSIGN_ATTEMPTS})`, err);
+        if (attempt < MAX_ASSIGN_ATTEMPTS) {
+          await new Promise(resolve => setTimeout(resolve, ASSIGN_RETRY_DELAY_MS));
+        }
       }
-    } catch (err) {
-      console.warn("تعذّر الوصول لخدمة التعيين العشوائي، استخدام التعيين المحلي كبديل.", err);
     }
   }
   // لا يمكن معرفة الترتيب التسلسلي الصحيح محليًا دون اتصال بالخادم (العدّاد هناك فقط)،
@@ -485,6 +544,12 @@ function buildWideRowFromSession() {
     const prev = idx === 0 ? 0 : s.elapsedByStage[STAGE_ORDER[idx - 1]];
     row[stg + '_duration_ms'] = (cur !== undefined && cur !== null && prev !== undefined && prev !== null)
       ? (cur - prev) : null;
+  });
+  // مدة الغياب عن الصفحة (انقطاع) المرتبطة بكل مرحلة، إن وُجدت
+  STAGE_ORDER.forEach(stg => {
+    const stageData = s.backup[stg];
+    row[stg + '_away_ms'] = stageData ? stageData.away_ms : null;
+    row[stg + '_had_interruption'] = stageData ? !!stageData.had_interruption : null;
   });
 
   const d = s.backup['demographics'] || {};
