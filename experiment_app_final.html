@@ -444,7 +444,8 @@ async function sendToBackend(stage, data) {
       await fetch(WEBAPP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: payload
+        body: payload,
+        keepalive: true // يضمن اكتمال هذا الطلب حتى لو أُغلقت الصفحة فورًا بعد إرساله
       });
       return; // نجح الإرسال، لا داعي لأي محاولة إضافية
     } catch (err) {
@@ -809,15 +810,18 @@ function showAssigning() {
     return;
   }
   renderScreen(`<div class="screen loading"><p>لحظات من فضلك...</p></div>`);
-  getAssignedGroup().then(({ group, participant_code }) => {
+  getAssignedGroup().then(async ({ group, participant_code }) => {
     session.assigned_group = group;
     session.participant_code = participant_code;
     // تُرسَل البيانات الديموغرافية الآن (بعد تأجيلها من شاشة الموافقة) لأن رمز
     // المشاركة بات معروفًا، فتُحفظ كل البيانات مرتبطة بالرمز نفسه منذ أول سطر
+    // (ننتظر اكتمال الإرسال قبل الانتقال، بدل تركه يجري في الخلفية بلا انتظار)
+    const sends = [];
     if (session.pendingDemographics) {
-      sendToBackend('demographics', session.pendingDemographics);
+      sends.push(sendToBackend('demographics', session.pendingDemographics));
     }
-    sendToBackend('assignment', { group: group, source: session.assignment_source });
+    sends.push(sendToBackend('assignment', { group: group, source: session.assignment_source }));
+    await Promise.all(sends);
     next();
   });
 }
@@ -846,7 +850,7 @@ function showPreMeasures() {
     session.draftAnswers.pre_measures = collectAll();
     prev();
   });
-  document.getElementById('toNext').addEventListener('click', () => {
+  document.getElementById('toNext').addEventListener('click', async () => {
     const data = collectAll();
     session.draftAnswers.pre_measures = data;
     const blocks = [
@@ -855,7 +859,7 @@ function showPreMeasures() {
       { items: STATE_CONTROL_ITEMS, namePrefix: 'pre_state' }
     ];
     if (!PREVIEW_MODE && !validateLikertSections(blocks)) return;
-    sendToBackend('pre_measures', data);
+    await sendToBackend('pre_measures', data);
     next();
   });
 }
@@ -899,7 +903,7 @@ function showRecall() {
     prev();
   });
 
-  document.getElementById('toNext').addEventListener('click', () => {
+  document.getElementById('toNext').addEventListener('click', async () => {
     const past = document.getElementById('pastSituation').value.trim();
     const upcoming = document.getElementById('upcomingSituation').value.trim();
     const closeness = document.getElementById('closenessRating').value;
@@ -924,7 +928,7 @@ function showRecall() {
         return;
       }
     }
-    sendToBackend('recall', {
+    await sendToBackend('recall', {
       past_situation_text: past,
       upcoming_situation_text: upcoming,
       closeness_rating: Number(closeness),
@@ -1058,7 +1062,7 @@ function showStemOrControlPhase(phaseKey) {
     prev();
   });
 
-  document.getElementById('toNext').addEventListener('click', () => {
+  document.getElementById('toNext').addEventListener('click', async () => {
     if (!PREVIEW_MODE) {
       let missingBlock = null;
       container.querySelectorAll('.stem-block').forEach(block => {
@@ -1078,7 +1082,7 @@ function showStemOrControlPhase(phaseKey) {
 
     const submittedAt = performance.now();
     const rows = collectRows();
-    sendToBackend(phaseKey, {
+    await sendToBackend(phaseKey, {
       group: group,
       rows: rows,
       total_page_time_ms: Math.round(submittedAt - pageShownAt)
@@ -1114,7 +1118,7 @@ function buildPostMeasureScreen(stageName) {
     session.draftAnswers[ns] = collectAll();
     prev();
   });
-  document.getElementById('toNext').addEventListener('click', () => {
+  document.getElementById('toNext').addEventListener('click', async () => {
     const data = collectAll();
     session.draftAnswers[ns] = data;
     const blocks = [
@@ -1124,7 +1128,11 @@ function buildPostMeasureScreen(stageName) {
       { items: MANIP_ITEMS, namePrefix: `${ns}_manip` }
     ];
     if (!PREVIEW_MODE && !validateLikertSections(blocks)) return;
-    sendToBackend(stageName, data);
+    if (stageName === 'post2') {
+      document.getElementById('toNext').disabled = true;
+      document.getElementById('toNext').textContent = 'جارٍ الحفظ...';
+    }
+    await sendToBackend(stageName, data);
     next();
   });
 }
@@ -1190,10 +1198,10 @@ function showFiller() {
     trialIndex++;
   }
 
-  document.getElementById('submitFiller').addEventListener('click', () => {
+  document.getElementById('submitFiller').addEventListener('click', async () => {
     const reported = document.getElementById('blueCount').value;
     if (!PREVIEW_MODE && reported === "") { alert("يرجى إدخال رقم قبل الإرسال."); return; }
-    sendToBackend('filler', {
+    await sendToBackend('filler', {
       reported_blue_count: reported === "" ? null : Number(reported),
       actual_blue_count: sequence.filter(c => c === 'blue').length,
       trial_log: trialLog
