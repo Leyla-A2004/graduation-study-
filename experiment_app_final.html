@@ -291,6 +291,48 @@ const session = {
   draftAnswers: {} // إجابات كل شاشة محفوظة مؤقتًا هنا، لاستعادتها عند الرجوع إليها
 };
 
+/* ===================== استئناف الجلسة بعد تحديث/انقطاع الصفحة =====================
+   بدون أي حفظ، كانت أي إعادة تحميل للصفحة (تحديث المتصفح بالخطأ، انقطاع إنترنت
+   يُعيد تحميل الصفحة تلقائيًا على بعض الأجهزة، إغلاق المتصفح وفتحه من جديد...)
+   تُنشئ session_id جديدًا تمامًا من الصفر وتستدعي التعيين العشوائي من جديد —
+   فتُحتسب هذه المشاركة لدى الخادم "مشاركة جديدة" رغم أنها نفس الشخص، وتفقد كل
+   إجاباتها السابقة. هذا بالضبط ما يُفسِّر ظهور عدد تعيينات أكبر من عدد المشاركات
+   الحقيقيات اللاتي أكملن التجربة (تعيينات "أشباح" بلا بقية بيانات).
+   الحل: حفظ لقطة من الجلسة (session + flowIndex) في localStorage بعد كل انتقال
+   بين المراحل، واستعادتها تلقائيًا عند فتح الصفحة لو كانت هناك جلسة لم تكتمل
+   بعد — بنفس session_id ورمز المشاركة والمجموعة المعيَّنة مسبقًا، فلا يُحتسب
+   تعيين جديد ولا تُفقد الإجابات السابقة.
+   ===================================================================== */
+const LOCAL_SESSION_KEY = 'exp_session_state_v1';
+
+function saveLocalSessionState() {
+  if (PREVIEW_MODE) return; // وضع المعاينة لا يُحفظ ولا يؤثر على أي جلسة حقيقية
+  try {
+    const snapshot = {
+      flowIndex: flowIndex,
+      elapsedOffsetMs: Math.round(performance.now() - session.startedAt),
+      session: session
+    };
+    localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(snapshot));
+  } catch (err) {
+    // تخزين المتصفح قد يكون غير متاح (تصفح خاص، مساحة ممتلئة...) — لا يُوقف التجربة
+    console.warn('تعذّر حفظ نسخة الاستئناف محليًا:', err);
+  }
+}
+
+function loadLocalSessionState() {
+  try {
+    const raw = localStorage.getItem(LOCAL_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function clearLocalSessionState() {
+  try { localStorage.removeItem(LOCAL_SESSION_KEY); } catch (err) { /* تجاهل */ }
+}
+
 /* ===================== رصد الانقطاع (مغادرة الصفحة مؤقتًا) =====================
    يرصد الوقت الذي تقضيه المشاركة خارج الصفحة (مكالمة، تبديل تطبيق، قفل الشاشة...)
    عبر Page Visibility API، ويُرفق مجموع هذا الوقت لكل مرحلة ضمن بياناتها (away_ms)
@@ -325,6 +367,39 @@ function takeAwayMsSinceLastStage() {
 /* ============================== أدوات عامة ============================== */
 
 const app = document.getElementById('app');
+
+/* ===================== حارس عام ضد تكرار النقر/الإرسال =====================
+   يمنع نقرة ثانية سريعة على نفس الزر من إطلاق المعالج مرتين قبل اكتمال
+   الإرسال غير المتزامن (sendToBackend قد يستغرق ثوانٍ عند بطء الشبكة بسبب
+   إعادة المحاولة). بدون هذا، نقرتان متتاليتان على نفس الزر كانتا تستدعيان
+   next() مرتين، فتتخطى الجلسة مرحلة كاملة من تسلسل FLOW بصمت (كمهمة
+   الصناديق الفاصلة) أو تقفز لشاشة غير متوقعة.
+
+   القفل هنا عام (navLock) وليس خاصًا بكل زر على حدة — وهذا يسد ثغرة أخطر:
+   لو ضغطت المشاركة "التالي" (معالجه غير متزامن وقيد التنفيذ، مثلًا ينتظر
+   إعادة محاولة إرسال بعد بطء شبكة)، ثم ضغطت بفارغ صبر على زر "السابق" المجاور
+   قبل أن ينتهي الأول — فحارس يخص زر "التالي" فقط لا يمنع زر "السابق" من
+   الانطلاق فورًا، فتُستدعى prev() وتظهر الشاشة السابقة، ثم فجأة عند اكتمال
+   معالج "التالي" الأصلي تُستدعى next() فتعيدها للشاشة التالية من جديد — وهو
+   بالضبط ما يبدو للمشاركة وكأن "الصفحة علّقت وأعادتها للصفحة السابقة" تكرارًا.
+   بقفل عام واحد، أي زر آخر على الشاشة نفسها يبقى معطَّلًا حتى يكتمل أي معالج
+   قيد التنفيذ بالفعل، بصرف النظر عن أي زر بدأه.
+   ===================================================================== */
+let navLock = false;
+function guardedClick(btn, handler) {
+  if (!btn) return;
+  btn.addEventListener('click', async (e) => {
+    if (navLock || btn.disabled) return;
+    navLock = true;
+    btn.disabled = true;
+    try {
+      await handler(e);
+    } finally {
+      navLock = false;
+      if (document.body.contains(btn)) btn.disabled = false;
+    }
+  });
+}
 
 function renderScreen(html) {
   const pct = (typeof FLOW !== 'undefined' && FLOW.length > 1)
@@ -413,6 +488,64 @@ function csvEscape(v) {
   return s;
 }
 
+/* ===================== طابور الإرسال المعلَّق (لانقطاع إنترنت طويل) =====================
+   إعادة المحاولة الثلاثية (أدناه) تكفي لانقطاع لحظي، لكن ثبت فعليًا من بيانات
+   مشاركة حقيقية (تبويب "data": وصلت demographics وassignment فقط، ثم فجوة
+   كاملة بلا pre_measures/recall/phase1 رغم وجودها كاملة في نسخة الجلسة
+   المحلية، ثم وصل post1 لاحقًا بعد ذلك) أن انقطاعًا أطول من بضع ثوانٍ (دقائق،
+   خروج عن تغطية الشبكة...) يستنفد المحاولات الثلاث بالكامل فتُفقد تلك
+   المرحلة نهائيًا من الخادم رغم أن المشاركة أكملتها فعليًا. الحل: أي مرحلة
+   تفشل بعد 3 محاولات تُحفظ في طابور دائم بـ localStorage بدل إهمالها، ويُعاد
+   محاولة إرسال كل ما في هذا الطابور تلقائيًا مع كل مرحلة تالية ناجحة (أول
+   اتصال فعلي يعود يُسلِّم كل المتراكم، لا المرحلة الحالية فقط)، وأيضًا عند
+   فتح الصفحة من جديد وعند الوصول لشاشة الختام كمحاولة أخيرة قبل مغادرة
+   المشاركة الصفحة.
+   ===================================================================== */
+const PENDING_QUEUE_KEY = 'exp_pending_sends_v1';
+
+function loadPendingQueue() {
+  try {
+    const raw = localStorage.getItem(PENDING_QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function savePendingQueue(queue) {
+  try { localStorage.setItem(PENDING_QUEUE_KEY, JSON.stringify(queue)); } catch (err) { /* تجاهل */ }
+}
+
+function queuePendingSend(payloadObj) {
+  if (PREVIEW_MODE) return;
+  const queue = loadPendingQueue();
+  queue.push(payloadObj);
+  if (queue.length > 200) queue.splice(0, queue.length - 200); // سقف احترازي بعيد الاحتمال
+  savePendingQueue(queue);
+}
+
+async function flushPendingQueue() {
+  if (PREVIEW_MODE) return;
+  if (!WEBAPP_URL || WEBAPP_URL === "PASTE_YOUR_WEB_APP_URL_HERE") return;
+  const queue = loadPendingQueue();
+  if (!queue.length) return;
+  const stillPending = [];
+  for (const item of queue) {
+    try {
+      await fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(item),
+        keepalive: true
+      });
+      // نجح — تُسقَط من الطابور
+    } catch (err) {
+      stillPending.push(item); // ما زالت معلَّقة — تُحفظ للمحاولة القادمة
+    }
+  }
+  savePendingQueue(stillPending);
+}
+
 async function sendToBackend(stage, data) {
   // نرفق مدة الغياب عن الصفحة منذ آخر مرحلة (إن وُجدت) ضمن بيانات هذه المرحلة تحديدًا
   const awayMs = takeAwayMsSinceLastStage();
@@ -428,15 +561,19 @@ async function sendToBackend(stage, data) {
     console.warn("WEBAPP_URL غير مضبوط بعد — تم الحفظ محليًا فقط لهذه المرحلة:", stage);
     return;
   }
-  const payload = JSON.stringify({
+  const payloadObj = {
     session_id: session.session_id,
     participant_code: session.participant_code,
     stage: stage,
     data: enrichedData,
     elapsed_since_start_ms: elapsed
-  });
+  };
+  // فرصة لتسليم أي مراحل سابقة بقيت معلّقة من فشل سابق، الآن بما أن هناك
+  // محاولة اتصال جديدة جارية أصلًا لهذه المرحلة
+  await flushPendingQueue();
+
   // إعادة محاولة تلقائية عند فشل الإرسال (انقطاع إنترنت مؤقت، مكالمة، إلخ) بدل
-  // الاستسلام من أول محاولة — تحاول 3 مرات بفاصل 2 ثانية قبل الاكتفاء بالحفظ المحلي
+  // الاستسلام من أول محاولة — تحاول 3 مرات بفاصل 2 ثانية قبل اللجوء للطابور المعلَّق
   const MAX_ATTEMPTS = 3;
   const RETRY_DELAY_MS = 2000;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -444,7 +581,7 @@ async function sendToBackend(stage, data) {
       await fetch(WEBAPP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: payload,
+        body: JSON.stringify(payloadObj),
         keepalive: true // يضمن اكتمال هذا الطلب حتى لو أُغلقت الصفحة فورًا بعد إرساله
       });
       return; // نجح الإرسال، لا داعي لأي محاولة إضافية
@@ -453,7 +590,8 @@ async function sendToBackend(stage, data) {
       if (attempt < MAX_ATTEMPTS) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
       } else {
-        console.warn("فشلت كل محاولات الإرسال، البيانات محفوظة محليًا فقط لهذه المرحلة:", stage);
+        console.warn("فشلت كل محاولات الإرسال — تُحفظ هذه المرحلة في طابور معلَّق يُعاد تسليمه تلقائيًا لاحقًا:", stage);
+        queuePendingSend(payloadObj);
       }
     }
   }
@@ -474,10 +612,18 @@ async function getAssignedGroup() {
     const ASSIGN_RETRY_DELAY_MS = 1500;
     for (let attempt = 1; attempt <= MAX_ASSIGN_ATTEMPTS; attempt++) {
       try {
-        const res = await fetch(`${WEBAPP_URL}?action=assign`);
+        // يُرفَق session_id مع طلب التعيين نفسه كي يستطيع الخادم تسجيل قرار
+        // التعيين فورًا وبشكل ذرّي (تحت قفل) في نفس لحظة اتخاذه، بدل انتظار
+        // طلب POST لاحق منفصل — وهذا ما يمنع حصول مشاركتين تبدآن في نفس
+        // اللحظات تقريبًا على نفس المجموعة (تزامن/race condition)
+        const res = await fetch(`${WEBAPP_URL}?action=assign&session_id=${encodeURIComponent(session.session_id)}`);
         const json = await res.json();
         if (json.group) {
           session.assignment_source = 'backend';
+          // الخادم سجّل مرحلة "assignment" بنفسه فورًا عند اتخاذ القرار (انظر
+          // أعلاه) — فلا تُكرَّر هذه المرحلة لاحقًا عبر sendToBackend، تفاديًا
+          // لصف مكرر قد يُخلّ بحساب التوازن للمشاركات القادمات
+          session.assignmentAlreadyRecorded = !!json.recorded;
           // رمز المشاركة التسلسلي (مثل P08-G2) يأتي جاهزًا من الخادم، لأنه الوحيد
           // المطّلع على ترتيب كل المشاركات السابقات عبر كل الأجهزة
           return { group: json.group, participant_code: json.participant_code || "" };
@@ -678,6 +824,7 @@ const FLOW = [
 let flowIndex = 0;
 function next() {
   flowIndex++;
+  saveLocalSessionState(); // حفظ لقطة استئناف فور الانتقال، قبل عرض الشاشة التالية
   if (flowIndex < FLOW.length) FLOW[flowIndex]();
 }
 function prev() {
@@ -685,7 +832,10 @@ function prev() {
     flowIndex--;
     // شاشة التعيين تلقائية بلا أي تفاعل — لا معنى للتوقف عندها رجوعًا
     if (FLOW[flowIndex] === showAssigning) flowIndex--;
-    if (flowIndex >= 0) FLOW[flowIndex]();
+    if (flowIndex >= 0) {
+      saveLocalSessionState();
+      FLOW[flowIndex]();
+    }
   }
 }
 
@@ -750,7 +900,7 @@ function showConsentAndDemographics() {
   if (draft.enrolled) document.getElementById('enrolledSelect').value = draft.enrolled;
   if (draft.arabic) document.getElementById('arabicSelect').value = draft.arabic;
 
-  document.getElementById('toNext').addEventListener('click', () => {
+  guardedClick(document.getElementById('toNext'), () => {
     const gender = document.getElementById('genderSelect').value;
     const year = document.getElementById('yearSelect').value;
     const gpa = document.getElementById('gpaSelect').value;
@@ -820,7 +970,12 @@ function showAssigning() {
     if (session.pendingDemographics) {
       sends.push(sendToBackend('demographics', session.pendingDemographics));
     }
-    sends.push(sendToBackend('assignment', { group: group, source: session.assignment_source }));
+    // لا تُرسَل مرحلة "assignment" هنا لو كان الخادم قد سجّلها بنفسه فورًا
+    // أثناء التعيين (انظر getAssignedGroup) — تفاديًا لتكرار الصف في تبويب
+    // "data"، وهو ما كان يُمكن أن يُخلّ بحساب التوازن للمشاركات القادمات
+    if (!session.assignmentAlreadyRecorded) {
+      sends.push(sendToBackend('assignment', { group: group, source: session.assignment_source }));
+    }
     await Promise.all(sends);
     next();
   });
@@ -846,11 +1001,11 @@ function showPreMeasures() {
     };
   }
 
-  document.getElementById('toPrev').addEventListener('click', () => {
+  guardedClick(document.getElementById('toPrev'), () => {
     session.draftAnswers.pre_measures = collectAll();
     prev();
   });
-  document.getElementById('toNext').addEventListener('click', async () => {
+  guardedClick(document.getElementById('toNext'), async () => {
     const data = collectAll();
     session.draftAnswers.pre_measures = data;
     const blocks = [
@@ -898,12 +1053,12 @@ function showRecall() {
       influence: document.getElementById('influenceRating').value
     };
   }
-  document.getElementById('toPrev').addEventListener('click', () => {
+  guardedClick(document.getElementById('toPrev'), () => {
     session.draftAnswers.recall = collectAll();
     prev();
   });
 
-  document.getElementById('toNext').addEventListener('click', async () => {
+  guardedClick(document.getElementById('toNext'), async () => {
     const past = document.getElementById('pastSituation').value.trim();
     const upcoming = document.getElementById('upcomingSituation').value.trim();
     const closeness = document.getElementById('closenessRating').value;
@@ -1057,12 +1212,12 @@ function showStemOrControlPhase(phaseKey) {
     return rows;
   }
 
-  document.getElementById('toPrev').addEventListener('click', () => {
+  guardedClick(document.getElementById('toPrev'), () => {
     session.draftAnswers[phaseKey] = { rows: collectRows() };
     prev();
   });
 
-  document.getElementById('toNext').addEventListener('click', async () => {
+  guardedClick(document.getElementById('toNext'), async () => {
     if (!PREVIEW_MODE) {
       let missingBlock = null;
       container.querySelectorAll('.stem-block').forEach(block => {
@@ -1082,6 +1237,13 @@ function showStemOrControlPhase(phaseKey) {
 
     const submittedAt = performance.now();
     const rows = collectRows();
+    // كانت هذه الشاشة وحدها (من بين كل الشاشات) لا تُحدِّث draftAnswers عند
+    // "التالي" — فقط عند "السابق". لو ضغطت المشاركة "السابق" من هذه الشاشة
+    // في وقت مبكر (قبل الكتابة) ثم عادت لاحقًا وأكملت وأرسلت إجاباتها
+    // بنجاح، كانت النسخة الفارغة القديمة تبقى عالقة في draftAnswers، فلو
+    // عادت الشاشة للظهور لاحقًا (رجوع، أو إعادة تحميل الصفحة) تظهر فارغة
+    // رغم أن إجاباتها الحقيقية وصلت وحُفظت فعليًا على الخادم بسلامة.
+    session.draftAnswers[phaseKey] = { rows: rows };
     await sendToBackend(phaseKey, {
       group: group,
       rows: rows,
@@ -1114,11 +1276,11 @@ function buildPostMeasureScreen(stageName) {
     };
   }
 
-  document.getElementById('toPrev').addEventListener('click', () => {
+  guardedClick(document.getElementById('toPrev'), () => {
     session.draftAnswers[ns] = collectAll();
     prev();
   });
-  document.getElementById('toNext').addEventListener('click', async () => {
+  guardedClick(document.getElementById('toNext'), async () => {
     const data = collectAll();
     session.draftAnswers[ns] = data;
     const blocks = [
@@ -1128,10 +1290,7 @@ function buildPostMeasureScreen(stageName) {
       { items: MANIP_ITEMS, namePrefix: `${ns}_manip` }
     ];
     if (!PREVIEW_MODE && !validateLikertSections(blocks)) return;
-    if (stageName === 'post2') {
-      document.getElementById('toNext').disabled = true;
-      document.getElementById('toNext').textContent = 'جارٍ الحفظ...';
-    }
+    document.getElementById('toNext').textContent = 'جارٍ الحفظ...';
     await sendToBackend(stageName, data);
     next();
   });
@@ -1166,9 +1325,9 @@ function showFiller() {
   let startedAt = 0;
   let timer = null;
 
-  document.getElementById('toPrev').addEventListener('click', () => { prev(); });
+  guardedClick(document.getElementById('toPrev'), () => { prev(); });
 
-  document.getElementById('startFiller').addEventListener('click', () => {
+  guardedClick(document.getElementById('startFiller'), () => {
     document.getElementById('fillerIntro').classList.add('hidden');
     document.getElementById('fillerDisplay').classList.remove('hidden');
     startedAt = performance.now();
@@ -1198,7 +1357,7 @@ function showFiller() {
     trialIndex++;
   }
 
-  document.getElementById('submitFiller').addEventListener('click', async () => {
+  guardedClick(document.getElementById('submitFiller'), async () => {
     const reported = document.getElementById('blueCount').value;
     if (!PREVIEW_MODE && reported === "") { alert("يرجى إدخال رقم قبل الإرسال."); return; }
     await sendToBackend('filler', {
@@ -1227,6 +1386,12 @@ function showDebrief() {
     document.getElementById('previewAgain').addEventListener('click', () => location.reload());
     return;
   }
+  // الجلسة اكتملت فعليًا — تُمسح نسخة الاستئناف المحلية كي لا تحاول زيارة
+  // لاحقة لنفس الجهاز (لمشاركة مختلفة مثلًا) استئناف جلسة منتهية بالخطأ
+  clearLocalSessionState();
+  // محاولة أخيرة لتسليم أي مراحل سابقة بقيت معلّقة في الطابور، قبل أن تغادر
+  // المشاركة الصفحة نهائيًا (بلا انتظار — لا تُعطِّل عرض شاشة الختام)
+  flushPendingQueue();
   renderScreen(`
     <div class="screen center">
       <p>${DEBRIEF_TEXT}</p>
@@ -1241,7 +1406,30 @@ function showDebrief() {
 }
 
 /* ============================== البداية ============================== */
-FLOW[0]();
+(function boot() {
+  if (!PREVIEW_MODE) {
+    // محاولة تسليم أي بيانات مراحل سابقة بقيت معلّقة من جلسة (أو زيارة) سابقة
+    // الآن بما أن الصفحة فُتحت من جديد — قد يكون الاتصال عاد (بلا انتظار، كي
+    // لا تتأخر الشاشة الأولى)
+    flushPendingQueue();
+    const saved = loadLocalSessionState();
+    if (saved && typeof saved.flowIndex === 'number' && saved.session && saved.flowIndex < FLOW.length - 1) {
+      // استئناف جلسة سابقة لم تكتمل بعد (تحديث صفحة بالخطأ، انقطاع اتصال،
+      // إغلاق المتصفح...) — بنفس الهوية (session_id/رمز المشاركة/المجموعة)
+      // وبدون إعادة طلب تعيين جديد من الخادم أو فقدان أي إجابات سابقة
+      flowIndex = saved.flowIndex;
+      Object.assign(session, saved.session);
+      // performance.now() يبدأ من الصفر من جديد مع كل تحميل للصفحة، فيُعاد
+      // ضبط startedAt بحيث يستمر حساب الزمن المنقضي بسلاسة من حيث توقف قبل
+      // إعادة التحميل، بدل أن يصبح مرجعًا خاطئًا من الجلسة القديمة
+      session.startedAt = performance.now() - (saved.elapsedOffsetMs || 0);
+      FLOW[flowIndex]();
+      return;
+    }
+    if (saved) clearLocalSessionState(); // جلسة سابقة كانت قد اكتملت فعلًا — لا تُستأنف
+  }
+  FLOW[0]();
+})();
 </script>
 </body>
 </html>
