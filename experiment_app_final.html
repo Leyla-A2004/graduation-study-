@@ -19,6 +19,8 @@
     --muted: #6B7280;
     --error: #9B3B33;
     --error-bg: #FBEEEC;
+    --focus: #B3261E;
+    --focus-bg: #FDECEA;
   }
   * { box-sizing: border-box; }
   body {
@@ -114,6 +116,11 @@
     background: #FBF4E4; border: 1px solid var(--accent-warm); border-radius: 8px;
     padding: 11px 15px; font-size: 13px; margin-top: 16px; color: #6B5225;
   }
+  .focus-note {
+    background: var(--focus-bg); border: 1px solid var(--focus); border-right: 5px solid var(--focus);
+    border-radius: 8px; padding: 13px 16px; margin-bottom: 20px;
+    font-size: 15px; font-weight: 700; color: var(--focus);
+  }
   .loading { text-align: center; padding: 80px 0; color: var(--muted); font-size: 16px; }
 
   /* يُعرَّف بعد عناصر الإدخال الأساسية أعلاه عمدًا ليضمن له الأولوية عند التعارض */
@@ -177,7 +184,7 @@ const PEARLIN_SCALE = ["موافق بشدة", "موافق", "موافق إلى �
 
 /* البنود الأربعة المكيَّفة المعتمدة (محور مستقل لكل بند): الفاعلية، الاستراتيجية، الإسناد، الثقة الوجدانية */
 const STATE_CONTROL_ITEMS = [
-  "أشعر الآن أنني قادرة على التصرف بفاعلية في الوضع الحالي.",
+  "أشعر الآن أنني قادر على التصرف بفاعلية في الوضع الحالي.",
   "أشعر الآن أنني أعرف كيف أتعامل مع الأمور في الوضع الحالي.",
   "أشعر الآن أن ما يحدث في الوضع الحالي يتوقف إلى حد كبير على ما أقوم به أنا.",
   "أشعر الآن بثقة في قدرتي على التأثير في الوضع الحالي."
@@ -195,8 +202,8 @@ const CRS_ITEMS = [
   "لقد تجاوزت هذا الحدث تمامًا.",
   "أشعر أن هذا الحدث قد تمت تسويته.",
   "حين أفكر في الأمر الآن، أشعر بالرضا عن الطريقة التي انتهت بها الأمور.",
-  "أنا منشغلة بهذا الحدث باستمرار.",
-  "أشعر أنني عالقة ذهنيًا في هذا الحدث.",
+  "أنا منشغل بهذا الحدث باستمرار.",
+  "أشعر أنني عالق ذهنيًا في هذا الحدث.",
   "يستهلك هذا الحدث الكثير من طاقتي الذهنية.",
   "هذا الحدث يعيقني ذهنيًا عن التقدم.",
   "هذا الحدث يستحوذ على انتباهي."
@@ -211,17 +218,17 @@ const MANIP_ITEMS = [
   "اقتصر تفكيري أثناء الكتابة على وصف الوقائع أو الأشياء كما هي، دون تخيّل احتمالات أو بدائل.",
   "كنتُ أفكر في أن النتيجة ستبقى كما هي في كل الأحوال.",
   "كنتُ أرى أن ما سيحدث مستقبلًا يتوقف على تصرّف محدد أقوم به أو على ظرف بعينه.",
-  "ما مدى الجهد الذي بذلتِه فعليًا في الكتابة الآن؟"
+  "ما مدى الجهد الذي بذلته فعليًا في الكتابة الآن؟"
 ];
 const MANIP_SCALE = ["لم تكن حاضرة إطلاقًا", "", "", "", "كانت حاضرة بدرجة كبيرة جدًا"];
 
 const WHATIF_STEMS = [
-  { sentence: "ماذا لو لم أكن متأكدة من كفاية استعدادي للموقف القادم؟" },
+  { sentence: "ماذا لو لم أكن متأكدًا من كفاية استعدادي للموقف القادم؟" },
   { sentence: "ماذا لو لم يسِر أدائي في الموقف القادم كما أتوقع؟" },
   { sentence: "ماذا لو طرأ ظرف غير متوقع في الموقف القادم؟" }
 ];
 const EVENIF_STEMS = [
-  { sentence: "حتى لو لم أكن متأكدة من كفاية استعدادي للموقف القادم،" },
+  { sentence: "حتى لو لم أكن متأكدًا من كفاية استعدادي للموقف القادم،" },
   { sentence: "حتى لو لم يسِر أدائي في الموقف القادم كما أتوقع،" },
   { sentence: "حتى لو طرأ ظرف غير متوقع في الموقف القادم،" }
 ];
@@ -245,7 +252,7 @@ const EVENIF_EXAMPLES = [
 const CONTROL_ITEMS = [
   { sentence: "الوقت والمكان:" },
   { sentence: "المتطلبات المعروفة (مثل: نوع الاختبار أو المهمة، موضوعها):" },
-  { sentence: "الترتيبات العملية (مثل: ما تحتاجين إحضاره، كيف ستصلين، مع من):" }
+  { sentence: "الترتيبات العملية (مثل: ما تحتاج إحضاره، كيف ستصل، مع من):" }
 ];
 
 const IDEA_LABEL_CONDITIONAL = (connective) => `فكرة إضافية مختلفة تبدأ بـ"${connective}":`;
@@ -266,12 +273,12 @@ const STEM_CONFIGS = {
   }
 };
 
-const INTRO_PHASE1 = `قبل الإجابة، أغمضي عينيكِ للحظات وتخيّلي نفسكِ في الموقف الأكاديمي القادم الذي حددتِه: أين ستكونين؟ ومن سيكون حولكِ؟ وماذا ستفعلين؟ حاولي أن تري هذا المشهد بوضوح، وأن تتصوري ما قد تفكرين فيه وتشعرين به وكيف قد تتصرفين، وكأن هذا الموقف يحدث أمامكِ الآن.`;
-const INTRO_PHASE2 = `ستعودين الآن لنفس الموقف الذي تخيلته. أغمضي عينيكِ للحظات وتخيّلي نفسكِ فيه مرة أخرى، وحاولي أن تري تفاصيله بوضوح كما لو أنه يحدث الآن. بعد ذلك، فكّري في هذا الموقف بالطريقة الموضحة أدناه.`;
-const INTRO_CONTROL_PHASE1 = `قبل أن تبدئي، أغمضي عينيكِ لحظات، وتخيّلي الموقف الأكاديمي القادم الذي حددتِه: أين سيكون؟ ومتى؟ ومن سيكون حاضرًا؟`;
-const INTRO_CONTROL_PHASE2 = `ستعودين الآن إلى الموقف الأكاديمي القادم نفسه. أغمضي عينيكِ للحظات وتخيّليه مرة أخرى: أين سيكون؟ ومتى؟ ومن سيكون حاضرًا؟ بعد ذلك، أكملي البنود الموضحة أدناه.`;
+const INTRO_PHASE1 = `قبل الإجابة، أغمض عينيك للحظات وتخيّل نفسك في الموقف الأكاديمي القادم الذي حددته: أين ستكون؟ ومن سيكون حولك؟ وماذا ستفعل؟ حاول أن ترى هذا المشهد بوضوح، وأن تتصور ما قد تفكر فيه وتشعر به وكيف قد تتصرف، وكأن هذا الموقف يحدث أمامك الآن.`;
+const INTRO_PHASE2 = `ستعود الآن لنفس الموقف الذي تخيلته. أغمض عينيك للحظات وتخيّل نفسك فيه مرة أخرى، وحاول أن ترى تفاصيله بوضوح كما لو أنه يحدث الآن. بعد ذلك، فكّر في هذا الموقف بالطريقة الموضحة أدناه.`;
+const INTRO_CONTROL_PHASE1 = `قبل أن تبدأ، أغمض عينيك لحظات، وتخيّل الموقف الأكاديمي القادم الذي حددته: أين سيكون؟ ومتى؟ ومن سيكون حاضرًا؟`;
+const INTRO_CONTROL_PHASE2 = `ستعود الآن إلى الموقف الأكاديمي القادم نفسه. أغمض عينيك للحظات وتخيّله مرة أخرى: أين سيكون؟ ومتى؟ ومن سيكون حاضرًا؟ بعد ذلك، أكمل البنود الموضحة أدناه.`;
 
-const DEBRIEF_TEXT = `شكرًا لمشاركتك. إذا أحببتِ الاطلاع على تفاصيل أكثر عن الدراسة بإمكانك التواصل على الإيميل: <a href="mailto:si2203705@qu.edu.qa">si2203705@qu.edu.qa</a>. نرجو ألا تناقشي تفاصيل الدراسة مع الزميلات اللاتي قد يشاركن لاحقًا.`;
+const DEBRIEF_TEXT = `شكرًا لمشاركتك. إذا أحببت الاطلاع على تفاصيل أكثر عن الدراسة بإمكانك التواصل على الإيميل: <a href="mailto:si2203705@qu.edu.qa">si2203705@qu.edu.qa</a>. نرجو ألا تناقش تفاصيل الدراسة مع الزملاء الذين قد يشاركون لاحقًا.`;
 
 const SQUARE_COLORS = { blue: "#2F6FDE", red: "#D93025", green: "#1E8E3E", yellow: "#F4B400" };
 const SQUARE_TRIAL_COUNT = 60;
@@ -851,16 +858,17 @@ function showConsentAndDemographics() {
       <div class="scale-block">
         <h3>بيانات أولية</h3>
         <label class="field-label" for="ageInput">العمر (بالأرقام)</label>
-        <input type="number" id="ageInput" min="18" max="46">
+        <input type="number" id="ageInput">
         <label class="field-label" for="genderSelect">النوع</label>
         <select id="genderSelect">
-          <option value="">-- اختاري --</option>
+          <option value="">-- اختر --</option>
           <option value="رجل">رجل</option>
           <option value="امرأة">امرأة</option>
         </select>
         <label class="field-label" for="yearSelect">السنة الدراسية</label>
         <select id="yearSelect">
-          <option value="">-- اختاري --</option>
+          <option value="">-- اختر --</option>
+          <option value="طالب ثانوي">طالب ثانوي</option>
           <option value="الأولى">الأولى</option>
           <option value="الثانية">الثانية</option>
           <option value="الثالثة">الثالثة</option>
@@ -868,22 +876,23 @@ function showConsentAndDemographics() {
         </select>
         <label class="field-label" for="gpaSelect">المعدل التراكمي</label>
         <select id="gpaSelect">
-          <option value="">-- اختاري --</option>
+          <option value="">-- اختر --</option>
+          <option value="لا يوجد معدل">لا يوجد معدل</option>
           <option value="أقل من 2.00">أقل من 2.00</option>
           <option value="من 2.00 إلى 2.49">من 2.00 إلى 2.49</option>
           <option value="من 2.50 إلى 2.99">من 2.50 إلى 2.99</option>
           <option value="من 3.00 إلى 3.49">من 3.00 إلى 3.49</option>
           <option value="من 3.50 إلى 4.00">من 3.50 إلى 4.00</option>
         </select>
-        <label class="field-label" for="enrolledSelect">طالبة حاليًا</label>
+        <label class="field-label" for="enrolledSelect">طالب حاليًا</label>
         <select id="enrolledSelect">
-          <option value="">-- اختاري --</option>
+          <option value="">-- اختر --</option>
           <option value="نعم">نعم</option>
           <option value="لا">لا</option>
         </select>
         <label class="field-label" for="arabicSelect">اللغة العربية هي لغتي الأم</label>
         <select id="arabicSelect">
-          <option value="">-- اختاري --</option>
+          <option value="">-- اختر --</option>
           <option value="نعم">نعم</option>
           <option value="لا">لا</option>
         </select>
@@ -937,7 +946,7 @@ function showConsentAndDemographics() {
       arabic_native: arabic
     };
 
-    // شرط إقصاء: غير الناطقات بالعربية كلغة أم — تنتهي التجربة هنا فورًا
+    // شرط إقصاء: غير الناطقين بالعربية كلغة أم — تنتهي التجربة هنا فورًا
     if (arabic === 'لا') {
       renderScreen(`
         <div class="screen center">
@@ -1024,17 +1033,17 @@ function showRecall() {
   const draft = session.draftAnswers.recall || {};
   renderScreen(`
     <div class="screen">
-      <p>صِفي بالتفصيل أحد أكثر المواقف السلبية التي مررتِ بها فيما يتعلق بالمجال الأكاديمي، ولا يزال يعود إلى تفكيرك أحيانًا ببعض تفاصيله؛ مثل: الحصول على درجة أقل مما توقعتِ، أو عرض تقديمي لم يسر كما أردتِ، أو التأخر في تسليم مهمة، أو خلاف مع زميلة أو أستاذ حول عمل أكاديمي، أو موقف أكاديمي انزعجت/حزنت فيه أسرتك بسبب أدائك، أو إحباط توقعات معينة لديهم أو لديكِ. اختاري موقفًا مزعجًا بدرجة متوسطة، وليس أكثر المواقف إيلامًا في حياتك.</p>
-      <p>اكتبي عن هذا الموقف بالتفصيل: ماذا حدث؟ أين ومتى؟ ما الذي فعلتِه أنتِ وما الذي فعله الآخرون؟ بماذا شعرتِ في تلك اللحظة؟ وبماذا تشعرين الآن وأنتِ تتذكرينه؟ حاولي أن تعيشي الموقف كأنه يحدث الآن، واستمري في الكتابة حتى ينتهي الوقت.</p>
+      <p>صِف بالتفصيل أحد أكثر المواقف السلبية التي مررت بها فيما يتعلق بالمجال الأكاديمي، ولا يزال يعود إلى تفكيرك أحيانًا ببعض تفاصيله؛ مثل: الحصول على درجة أقل مما توقعت، أو عرض تقديمي لم يسر كما أردت، أو التأخر في تسليم مهمة، أو خلاف مع زميل أو أستاذ حول عمل أكاديمي، أو موقف أكاديمي انزعجت/حزنت فيه أسرتك بسبب أدائك، أو إحباط توقعات معينة لديهم أو لديك. اختر موقفًا مزعجًا بدرجة متوسطة، وليس أكثر المواقف إيلامًا في حياتك.</p>
+      <p>اكتب عن هذا الموقف بالتفصيل: ماذا حدث؟ أين ومتى؟ ما الذي فعلته أنت وما الذي فعله الآخرون؟ بماذا شعرت في تلك اللحظة؟ وبماذا تشعر الآن وأنت تتذكره؟ حاول أن تعيش الموقف كأنه يحدث الآن، واستمر في الكتابة حتى ينتهي الوقت.</p>
       <textarea id="pastSituation" style="min-height:220px">${draft.past || ''}</textarea>
-      <p style="margin-top:22px">فكّري الآن في موقف أكاديمي قادم تتوقعين أن تمرّي به، ويشبه في طبيعته الموقف الذي كتبتِ عنه، واكتبيه في سطر واحد بشكل محدد (مثل: "الاختبار النهائي لمادة الإحصاء"):</p>
+      <p style="margin-top:22px">فكّر الآن في موقف أكاديمي قادم تتوقع أن تمرّ به، ويشبه في طبيعته الموقف الذي كتبت عنه، واكتبه في سطر واحد بشكل محدد (مثل: "الاختبار النهائي لمادة الإحصاء"):</p>
       <input type="text" id="upcomingSituation" style="width:100%" value="${draft.upcoming ? draft.upcoming.replace(/"/g, '&quot;') : ''}">
-      <p style="margin-top:22px">أجيبي عن الأسئلة الثلاثة التالية بخصوص هذا الموقف (ضعي رقمًا من 1 إلى 7 لكل سؤال):</p>
+      <p style="margin-top:22px">أجب عن الأسئلة الثلاثة التالية بخصوص هذا الموقف (ضع رقمًا من 1 إلى 7 لكل سؤال):</p>
       <label class="field-label" for="closenessRating">1. ما مدى قرب هذا الموقف زمنيًا؟ (1 = بعيد جدًا — 7 = قريب جدًا)</label>
       <input type="number" id="closenessRating" min="1" max="7" value="${draft.closeness || ''}">
-      <label class="field-label" for="importanceRating">2. ما درجة أهمية هذا الموقف أو إزعاجه بالنسبة لكِ؟ (1 = غير مهم إطلاقًا — 7 = مهم جدًا)</label>
+      <label class="field-label" for="importanceRating">2. ما درجة أهمية هذا الموقف أو إزعاجه بالنسبة لك؟ (1 = غير مهم إطلاقًا — 7 = مهم جدًا)</label>
       <input type="number" id="importanceRating" min="1" max="7" value="${draft.importance || ''}">
-      <label class="field-label" for="influenceRating">3. ما درجة شعوركِ بقدرتكِ على التأثير في نتيجة هذا الموقف؟ (1 = لا تأثير إطلاقًا — 7 = تأثير كامل)</label>
+      <label class="field-label" for="influenceRating">3. ما درجة شعورك بقدرتك على التأثير في نتيجة هذا الموقف؟ (1 = لا تأثير إطلاقًا — 7 = تأثير كامل)</label>
       <input type="number" id="influenceRating" min="1" max="7" value="${draft.influence || ''}">
       <div class="center">
         <button id="toPrev" class="secondary">السابق</button>
@@ -1107,6 +1116,7 @@ function showStemOrControlPhase(phaseKey) {
 
   renderScreen(`
     <div class="screen">
+      <p class="focus-note">أجب على كل الأسئلة التالية بناءً على آخر موقف وسيناريو تخيلته، وهو الموقف المتوقع القادم.</p>
       ${intro ? `<p>${intro}</p>` : ''}
       <div id="phaseContainer"></div>
       <div class="center">
@@ -1257,7 +1267,9 @@ function showStemOrControlPhase(phaseKey) {
 function buildPostMeasureScreen(stageName) {
   const ns = stageName; // 'post1' | 'post2' — لتمييز أسماء الحقول بين القياسين
   const draft = session.draftAnswers[ns] || {};
-  renderScreen(`<div class="screen"><div id="postContainer"></div><div class="center">
+  renderScreen(`<div class="screen">
+    <p class="focus-note">أجب على كل الأسئلة التالية بناءً على آخر موقف وسيناريو تخيلته، وهو الموقف المتوقع القادم.</p>
+    <div id="postContainer"></div><div class="center">
     <button id="toPrev" class="secondary">السابق</button>
     <button id="toNext">التالي</button>
   </div></div>`);
@@ -1303,7 +1315,7 @@ function showFiller() {
   renderScreen(`
     <div class="screen center">
       <div id="fillerIntro">
-        <p>ستظهر أمامكِ على الشاشة مربعات بألوان مختلفة، واحدًا تلو الآخر. عُدّي بهدوء كم مرة يظهر المربع الأزرق، ثم اكتبي العدد عند انتهاء العرض.</p>
+        <p>ستظهر أمامك على الشاشة مربعات بألوان مختلفة، واحدًا تلو الآخر. عُدّ بهدوء كم مرة يظهر المربع الأزرق، ثم اكتب العدد عند انتهاء العرض.</p>
         <button id="toPrev" class="secondary">السابق</button>
         <button id="startFiller">ابدأ</button>
         ${PREVIEW_MODE ? '<br><button id="skipFiller" class="secondary">تخطي عرض الألوان (معاينة فقط)</button>' : ''}
